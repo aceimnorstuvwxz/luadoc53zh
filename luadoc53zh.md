@@ -66,53 +66,102 @@ interesting
 ###table
 
 
+
 #Lua 5.3 Reference Manual
 
 by Roberto Ierusalimschy, Luiz Henrique de Figueiredo, Waldemar Celes
 Copyright © 2015 Lua.org, PUC-Rio. Freely available under the terms of the Lua license.
 
 contents · index
+#Lua 5.3 参考手册
+作者 Roberto Ierusalimschy, Luiz Henrique de Figueiredo, Waldemar Celes
+译者 九泽
 
-##1 – 介绍
+本文档翻译时对语句的组织位于直译与意译之间，这主要出于可读性比“严谨”在这里更重要。如果直译，其结果与机器翻译类似，那么人工翻译就失去意义。文中部分概念没有对应的中文词汇的将直接使用英文单词，语义不明确的词在首次出现时将同时标注原文。
 
-Lua是支持普通的过程式编程范式，同时也支持函数式、面向对象和数据驱动编程范式[todo 术语规范化]。Lua又强大又轻，非常适合作为嵌入到其它程序中的脚本语言。Lua用最普通的C，能够与标准C和C++兼容。
+##1 – 简介
 
-Lua没有main函数，Lua作为其它系统的一部分存在。通过它，你能够在lua脚本中调用c 函数，在c函数中调用lua脚本。将系统中经常变更的部分放在lua脚本中，例如游戏的逻辑代码，这使得工程修改验证速度加快。
+Lua is an extension programming language designed to support general procedural programming with data description facilities. Lua also offers good support for object-oriented programming, functional programming, and data-driven programming. Lua is intended to be used as a powerful, lightweight, embeddable scripting language for any program that needs one. Lua is implemented as a library, written in clean C, the common subset of Standard C and C++.
 
-Lua免费，随便用。这个manual用处不大。
+As an extension language, Lua has no notion of a "main" program: it only works embedded in a host client, called the embedding program or simply the host. The host program can invoke functions to execute a piece of Lua code, can write and read Lua variables, and can register C functions to be called by Lua code. Through the use of C functions, Lua can be augmented to cope with a wide range of different domains, thus creating customized programming languages sharing a syntactical framework. The Lua distribution includes a sample host program called lua, which uses the Lua library to offer a complete, standalone Lua interpreter, for interactive or batch use.
+
+Lua is free software, and is provided as usual with no guarantees, as stated in its license. The implementation described in this manual is available at Lua's official web site, www.lua.org.
+
+Like any other reference manual, this document is dry in places. For a discussion of the decisions behind the design of Lua, see the technical papers available at Lua's web site. For a detailed introduction to programming in Lua, see Roberto's book, Programming in Lua.
+
+Lua是一门扩展式程序设计语言（胶水），它被设计成支持通用过程式编程（procedural programming），并有相关数据结构描述设施。同时，Lua也支持面向对象编程、函数式编程和数据驱动式(data-driven)编程。Lua作为一门强大的轻量的嵌入式的语言，可以被任何需要的程序使用。Lua是一个用Clean C（一个标准C和C++的子集）撰写的库。
+
+作为一个扩展语言，Lua没有"main"函数概念，即：Lua只有被嵌入到宿主程序中才能工作。宿主程序能够调用一些函数来执行一段Lua代码，能读写Lua的变量，也能将C函数注册到Lua中以被Lua代码调用。通过对C函数的调用，Lua能够被配置而用于众多不同的领域，来创建共享语法框架的定制的编程语言。Lua的代码中包含一个名为"lua"的示例宿主程序，它使用Lua库来提供一个完整的独立的Lua解释器，可以用于交互或者批处理。
+
+Lua是自由软件，如其许可证所述，不提供任何担保。你可以从Lua的官方网站（www.lua.org)找到本手册对应的实现。
+
+与其它参考手册一样，本文档是极简洁的(dry in places)。你可以从我们的主页上查看相关的技术论文以了解Lua这样设计的原因和相关讨论。更详细的Lua编程指导见Roberto的书，Programming in Lua。
 
 ##2 – 基本概念
 
-本章介绍lua的基本概念。
+本章描述Lua的基本概念。
 
-###2.1 – 值和类型
+###2.1 – 值与类型
+Lua is a dynamically typed language. This means that variables do not have types; only values do. There are no type definitions in the language. All values carry their own type.
 
-lua是动态类型语言。这意味着只有值有类型，而变量没有类型。
+All values in Lua are first-class values. This means that all values can be stored in variables, passed as arguments to other functions, and returned as results.
 
-所有的值都是第一类值。所有的传递都是深度copy。
+Lua是一门动态类型语言。这意味着只有值(value)有类型(type)，而变量不具有类型。在语言中没有类型定义。所有的值都附带其类型。
 
-lua有8个值类型，分别是nil,boolean,number,string,function,userdata,thread 和 table。nil
-nil表N/A空值。boolean有true和false两个值。nil和false都会使条件判断为假，其它值均为真。Number可以表示整数和实数。String表示不可变的byte序列。Lua是8-bit clean的，即string都可以包含任何8-bit的值，包括'\0'。lua对编码不敏感，对字符串的内容没有做任何限制。
+所有的值都是第一等（first-class）值。这表明，任何值都可以被存储于变量，作为参数被传入函数中，及作为函数的返回值。
 
-number在内部用两个类型表示，分别是integer和float。lua具有一套明确的规则来决定究竟用哪个形式来表示一个Number。在需要转化时，Lua能够自动完成。因此，一般程序员不必取纠结lua在内部是用integer还是float来存储某个变量的，这些都交给lua就可以了。lua默认使用64bit的integer和float（双精度）。可以配置成使用32Bit。（luaconf.h中找LUA_32BITS宏即可）
+There are eight basic types in Lua: nil, boolean, number, string, function, userdata, thread, and table. Nil is the type of the value nil, whose main property is to be different from any other value; it usually represents the absence of a useful value. Boolean is the type of the values false and true. Both nil and false make a condition false; any other value makes it true. Number represents both integer numbers and real (floating-point) numbers. String represents immutable sequences of bytes. Lua is 8-bit clean: strings can contain any 8-bit value, including embedded zeros ('\0'). Lua is also encoding-agnostic; it makes no assumptions about the contents of a string.
 
-function可以代表lua中的函数也可以是用c写的函数。
+
+The type number uses two internal representations, one called integer and the other called float. Lua has explicit rules about when each representation is used, but it also converts between them automatically as needed (see §3.4.3). Therefore, the programmer may choose to mostly ignore the difference between integers and floats or to assume complete control over the representation of each number. Standard Lua uses 64-bit integers and double-precision (64-bit) floats, but you can also compile Lua so that it uses 32-bit integers and/or single-precision (32-bit) floats. The option with 32 bits for both integers and floats is particularly attractive for small machines and embedded systems. (See macro LUA_32BITS in file luaconf.h.
+
+Lua包含8中类型，分别是nil、boolean、number、string、function、userdata、thread 和 table。**Nil**是nil的类型。nil区别于其它所有的值。它通常表示此处缺少一个有用的值。**Boolean**是value、false的类型。nil和false在条件语句中均为假，其它值均为真。**Number**表示整数（integer）或浮点数（floating-point）。**String**表示不可变的字节（byte）序列。Lua是8-bit对齐的（8-bit clean），即字节串（string）可以包含任何8-bit的值，包括'\0'。Lua是编码无关的（encoding-agnostic），对字节串的内容不作任何限制。
+
+Number在实现内部使用了两个类型来表示，分别是integer和float。Lua具有一套明确的规则来决定究竟用哪个形式来表示一个Number。它们之间在必要时会自动转化。因此，一般程序员不必关心Lua在内部是用integer还是float来存储某个Number值的，只有少数情况下要完全控制number的内部表示。Lua默认使用64bit的integer和float（双精度）。可以配置成使用32Bit（单精度），luaconf.h中找LUA_32BITS宏即可。
+
+Lua can call (and manipulate) functions written in Lua and functions written in C (see §3.4.10). Both are represented by the type function.
+
+The type userdata is provided to allow arbitrary C data to be stored in Lua variables. A userdata value represents a block of raw memory. There are two kinds of userdata: full userdata, which is an object with a block of memory managed by Lua, and light userdata, which is simply a C pointer value. Userdata has no predefined operations in Lua, except assignment and identity test. By using metatables, the programmer can define operations for full userdata values (see §2.4). Userdata values cannot be created or modified in Lua, only through the C API. This guarantees the integrity of data owned by the host program.
+
+The type thread represents independent threads of execution and it is used to implement coroutines (see §2.6). Lua threads are not related to operating-system threads. Lua supports coroutines on all systems, even those that do not support threads natively.
+
+The type table implements associative arrays, that is, arrays that can be indexed not only with numbers, but with any Lua value except nil and NaN. (Not a Number is a special numeric value used to represent undefined or unrepresentable results, such as 0/0.) Tables can be heterogeneous; that is, they can contain values of all types (except nil). Any key with value nil is not considered part of the table. Conversely, any key that is not part of a table has an associated value nil.
+
+
+Lua可以使用Lua或者C实现的函数。这两种函数的类型都是**function**。
 
 userdata代表一块raw内存，它可以让c数据存储在lua的变量中。userdata有两个类型，分别是1）full userdata，指一块由lua管理的内存。 2）light userdata，只是一个c指针。userdata除了assignment和identity test之外，没有其它预先定义的操作。码农可以通过metatables给full userdata定义oprations。userdata值不能够被Lua创建和修改，只能通过c API。这保证了host program数据的完整性。
 
 thread类型表示一个执行线程，它是用来实现协程的。lua的thread与操作系统的线程没有半点关系。lua在所有系统上支持coroutine协程。
 
-table类型实现了关联数组。这个关联数组既可以被除了nil和NaN（not a number，特殊的number，表示undefined或者unrepresentable的结果，比如0/0）之外所有的lua值所index。例如下面代码，用了function作为index key。**TODO** table的值的限制是不能是nil，任何值为nil的pair将不再是table的成员。同时，不是table成员的key会返回的值为nil。
+table类型实现了关联数组。这个关联数组既可以被除了nil和NaN（not a number，特殊的number，表示undefined或者unrepresentable的结果，比如0/0）之外所有的lua值所index。例如下面代码，用了function作为index key。table的值的限制是不能是nil，任何值为nil的pair将不再是table的成员。同时，不是table成员的key会返回的值为nil。
 
-table是lua中惟一的构建数据结构的方式。它可以被用来表示arrays,sequences, symbol tables, sets, records, graphs, trees等。在表达records时，Lua使用field作为table的index。在lua中，有个syntactic sugar是a.name=a["name"]。其它还有一些方便的方式来创建和管理table(see @3.4.9)。
+    local mytable = {}
+    local key = function()begin print("hello world") end;
+    mytable[key] = key
+    mytable[key]()//hello world!
 
-sequence不是array，它从1开始index到n，n是它的长度（@3.4.7）。
+Tables are the sole data-structuring mechanism in Lua; they can be used to represent ordinary arrays, sequences, symbol tables, sets, records, graphs, trees, etc. To represent records, Lua uses the field name as an index. The language supports this representation by providing a.name as syntactic sugar for a["name"]. There are several convenient ways to create tables in Lua (see §3.4.9).
 
-table的值可以是任何类型，包括function。同时也可以是method。**TODO**(@3.4.11)
+We use the term sequence to denote a table where the set of all positive numeric keys is equal to {1..n} for some non-negative integer n, which is called the length of the sequence (see §3.4.7).
 
-table的索引按照raw equality来进行。只有i和j是raw equal时，a[i] ，a[j]才是同一个element。但是例外是对于number，类似2.0会被搞成纯integer为2。例如：a[2.0]和a[2]是同一个，但是a[2.1]和a[2]不是同一个。**（In particular, floats with integral values are equal to their respective integers (e.g., 1.0 == 1).）** 注意，a["2.0"] 和a[2.0]不一样。
+Like indices, the values of table fields can be of any type. In particular, because functions are first-class values, table fields can contain functions. Thus tables can also carry methods (see §3.4.11).
 
-table，function，threads 和(full)userdata的值是objects，即，这些变量并不实际的包含value，只是reference到它们，同时对assignment,parameter passing 和fucntion return也总是reference传递，而不是值拷贝。
+The indexing of tables follows the definition of raw equality in the language. The expressions a[i] and a[j] denote the same table element if and only if i and j are raw equal (that is, equal without metamethods). In particular, floats with integral values are equal to their respective integers (e.g., 1.0 == 1). To avoid ambiguities, any float with integral value used as a key is converted to its respective integer. For instance, if you write a[2.0] = true, the actual key inserted into the table will be the integer 2. (On the other hand, 2 and "2" are different Lua values and therefore denote different table entries.)
+
+Tables, functions, threads, and (full) userdata values are objects: variables do not actually contain these values, only references to them. Assignment, parameter passing, and function returns always manipulate references to such values; these operations do not imply any kind of copy.
+
+The library function type returns a string describing the type of a given value (see §6.1).
+
+Table是lua中惟一的构建数据结构的方式。它可以被用来表示array、sequence、symbol table、set、record、graph、tree等。在表达records时，Lua使用field name作为table的index。在lua中，有个甜食（syntactic sugar）是a.name=a["name"]。其它还有一些方便的方式来创建和管理table。(@3.4.7)
+
+Sequence不是array，它从1开始index到n，n是它的长度。（@3.4.7）
+
+Table的值可以是任何类型，包括function。在table中的方法可以成为该table对象的method。
+
+Table的索引按照raw equality来进行。只有i和j是raw equal时，a[i] ，a[j]才是同一个element。特别的对于number，类似2.0会被搞成纯integer为2。例如：a[2.0]和a[2]是同一个，但是a[2.1]和a[2]不是同一个。**In particular, floats with integral values are equal to their respective integers (e.g., 1.0 == 1).）** 注意，a["2.0"] 和a[2.0]不一样。
+
+Table，function，threads 和(full)userdata的值是objects，即，这些变量并不实际的包含value，只是reference，同时对assignment,parameter passing 和fucntion return也总是reference传递，而不是值拷贝。
 
 库函数type()会返回value的类型描述。（@6.1)
 
@@ -128,7 +177,17 @@ Lua keeps a distinguished environment called the global environment. This value 
 
 When Lua loads a chunk, the default value for its _ENV upvalue is the global environment (see load). Therefore, by default, free names in Lua code refer to entries in the global environment (and, therefore, they are also called global variables). Moreover, all standard libraries are loaded in the global environment and some functions there operate on that environment. You can use load (or loadfile) to load a chunk with a different environment. (In C, you have to load the chunk and then change the value of its first upvalue.)
 
-###2.3 – Error Handling
+一个free name（即不被限制在任何的声明中）的变量var会被转换为_ENV.var。更具体的，任何的chunk都会在加载时注入一个名为_ENV的外在局部变量（external local variable），所以_ENV本身对于host整体来说不是free name。
+
+尽管_ENV这个名字被用来表达一个外来的变量了，但_ENV本质上依旧是一个常规名称。我们依旧可以自己定义一个新的变量使用同样的变量名。任何时候，对某变量名的引用都遵循通用的变量可见性法则，_ENV也不例外。但通常只有没有必要覆盖_ENV变量。
+
+加载时注入的_ENV是一个table，它表示环境变量。
+
+Lua保持了一个特别的环境变量叫做全局环境变量。它的值保存在一个特殊的C registery中。在C中，全局变量_G也被初始化为此全局变量，但_G不在Lua的内部出现。
+
+当Lua加载一个chunk（即代码段），_ENV这个upvalue的默认值就是那个全局变量。因此，默认的，free names都会引用到全局变量的entries（所以，这些free names也被称为全局变量）。标准库加载在全局环境变量中，同时一些函数可以操作这个全局环境变量，即标准库在_ENV中。你可以用load或者Loadfile来加载一个chunk，通过指明其环境变量来赋予其一个非全局环境变量的环境变量。（在C中，要指定某chunk的环境变量，需要在加载chunk后修改其首个upvalue。）
+
+###2.3 – 错误处理
 
 Because Lua is an embedded extension language, all Lua actions start from C code in the host program calling a function from the Lua library. (When you use Lua standalone, the lua application is the host program.) Whenever an error occurs during the compilation or execution of a Lua chunk, control returns to the host, which can take appropriate measures (such as printing an error message).
 
@@ -138,112 +197,159 @@ Whenever there is an error, an error object (also called an error message) is pr
 
 When you use xpcall or lua_pcall, you may give a message handler to be called in case of errors. This function is called with the original error message and returns a new error message. It is called before the error unwinds the stack, so that it can gather more information about the error, for instance by inspecting the stack and creating a stack traceback. This message handler is still protected by the protected call; so, an error inside the message handler will call the message handler again. If this loop goes on for too long, Lua breaks it and returns an appropriate message.
 
-###2.4 – Metatables and Metamethods
+因为Lua是一个嵌入式扩展语言，所以Lua的执行都是从宿主程序某处C代码中调用一个Lua库函数开始的。在编译和执行一段chunk的时候，如果出现错误，Lua库将返回到宿主的C代码中，并告知错误，宿主可以处理这些错误。比如Lua standalone中，宿主发现Lua执行错误时的处理就是打印错误信息。
+
+Lua代码可以通过调用error函数，显式地产生一个错误。如果需要在Lua代码中捕获错误，你可以使用pcall或者xpcall在保护模式下调用一个指定的函数。**TODO 什么是保护模式，pcall xpcall是怎么回事**
+
+当错误发生了，一个error对象（也称为error消息）会携带错误信息返回到宿主中。Lua本身产生的error对象实际上只是一个string，里面包含一条描述错误的消息，而实际上Lua代码可以把任何值作为error对象。并且依赖于Lua程序或者宿主程序来处理这种特别的error对象。**TODO 实例**
+
+当你使用xpcall或者lua_pcall时，你可以指定一个message handler。这个message handler在error出现时会被调用。这个message handler在调用时会传入原始的error对象，并且它应该返回一个新的error对象。它会在Lua展开调用栈之前被调用，因而它可以收集关于错误的更多的信息，比如收集函数调用关系（stack traceback)。这个message handler本身也是被proteceted call保护的。所以如果message handler函数自己出现了错误，会导致此message handler被再次调用。如果这导致了死循环，Lua会打破它并返回一条合适的消息。
+
+###2.4 – 元表及元方法
 
 Every value in Lua can have a metatable. This metatable is an ordinary Lua table that defines the behavior of the original value under certain special operations. You can change several aspects of the behavior of operations over a value by setting specific fields in its metatable. For instance, when a non-numeric value is the operand of an addition, Lua checks for a function in the field "__add" of the value's metatable. If it finds one, Lua calls this function to perform the addition.
 
+Lua中的每个值都可以有一个元表。元表就是一个普通的Lua table。元表定义了原值在特定操作下的行为。你可以通过该表元表中的原方法来该表原值在特定操作时的行为。比如，当一个非Number类型的值被执行加法操作时，Lua会去检查其元表中的“__add”项，如果存在，则调用其所对应的元方法来完成此加法操作。
+
 The keys in a metatable are derived from the event names; the corresponding values are called metamethods. In the previous example, the event is "add" and the metamethod is the function that performs the addition.
+
+元表的键名是事件名，其所对应的值就是元方法。在前面的例子中，事件名为“add”，而元方法就是执行此加法的函数。
 
 You can query the metatable of any value using the getmetatable function.
 
+你可以通过getmetatable函数来获取某值的元表。
+
 You can replace the metatable of tables using the setmetatable function. You cannot change the metatable of other types from Lua (except by using the debug library (§6.10)); you must use the C API for that.
+
+你可以通过setmetatable函数来设置table的元表。你不能在Lua中改变其它类型的元表，而只能在C代码中。
 
 Tables and full userdata have individual metatables (although multiple tables and userdata can share their metatables). Values of all other types share one single metatable per type; that is, there is one single metatable for all numbers, one for all strings, etc. By default, a value has no metatable, but the string library sets a metatable for the string type (see §6.4).
 
+Table和full userdata对于每个对象都有独立的元表（虽然多个table和userdata可以共享同一个元表）。对于其它类型，各类型下的所有值都共享一个唯一的元表。在默认情况下，除了string类型外，其它类型的值是没有初始元表的。
+
 A metatable controls how an object behaves in arithmetic operations, bitwise operations, order comparisons, concatenation, length operation, calls, and indexing. A metatable also can define a function to be called when a userdata or a table is garbage collected (§2.5).
+
+元表控制着对象在数学操作、位操作、比较操作、连接操作、取长度操作、函数调用操作 和 indexing时的表现。同时，元表还可以定义一个在GC此对象时被调用的方法。
 
 A detailed list of events controlled by metatables is given next. Each operation is identified by its corresponding event name. The key for each event is a string with its name prefixed by two underscores, '__'; for instance, the key for operation "add" is the string "__add". Note that queries for metamethods are always raw; the access to a metamethod does not invoke other metamethods. You can emulate how Lua queries a metamethod for an object obj with the following code:
 
-     rawget(getmetatable(obj) or {}, "__" .. event_name)
 For the unary operators (negation, length, and bitwise not), the metamethod is computed and called with a dummy second operand, equal to the first one. This extra operand is only to simplify Lua's internals (by making these operators behave like a binary operation) and may be removed in future versions. (For most uses this extra operand is irrelevant.)
 
+下面将会给出所有元表支持的操作名称。每个操作都有一个操作名。而元表的键名由两个下划线与操作名连接而成。比如“add”操作在元表中的键名是“__add”。注意，对元方法的引用永远是原始的（raw)，而不会调用其它的元方法。下面代码模拟了此过程：
+
+     rawget(getmetatable(obj) or {}, "__" .. event_name)
+
+对于一元操作符（取反、取长度和位非），元方法在被调用时会传入一个与首参数一致的第二个参数。这个多余的第二个参数只是为了Lua的实现方便。函数的实现代码中应该不能依赖于第二个参数，因为它可能在未来版本被移除。
+
 "add": the + operation. If any operand for an addition is not a number (nor a string coercible to a number), Lua will try to call a metamethod. First, Lua will check the first operand (even if it is valid). If that operand does not define a metamethod for the "__add" event, then Lua will check the second operand. If Lua can find a metamethod, it calls the metamethod with the two operands as arguments, and the result of the call (adjusted to one value) is the result of the operation. Otherwise, it raises an error.
-"sub": the - operation. Behavior similar to the "add" operation.
-"mul": the * operation. Behavior similar to the "add" operation.
-"div": the / operation. Behavior similar to the "add" operation.
-"mod": the % operation. Behavior similar to the "add" operation.
-"pow": the ^ (exponentiation) operation. Behavior similar to the "add" operation.
-"unm": the - (unary minus) operation. Behavior similar to the "add" operation.
-"idiv": the // (floor division) operation. Behavior similar to the "add" operation.
-"band": the & (bitwise and) operation. Behavior similar to the "add" operation, except that Lua will try a metamethod if any operator is neither an integer nor a value coercible to an integer (see §3.4.3).
-"bor": the | (bitwise or) operation. Behavior similar to the "band" operation.
-"bxor": the ~ (bitwise exclusive or) operation. Behavior similar to the "band" operation.
-"bnot": the ~ (bitwise unary not) operation. Behavior similar to the "band" operation.
-"shl": the << (bitwise left shift) operation. Behavior similar to the "band" operation.
-"shr": the >> (bitwise right shift) operation. Behavior similar to the "band" operation.
-"concat": the .. (concatenation) operation. Behavior similar to the "add" operation, except that Lua will try a metamethod if any operator is neither a string nor a number (which is always coercible to a string).
-"len": the # (length) operation. If the object is not a string, Lua will try its metamethod. If there is a metamethod, Lua calls it with the object as argument, and the result of the call (always adjusted to one value) is the result of the operation. If there is no metamethod but the object is a table, then Lua uses the table length operation (see §3.4.7). Otherwise, Lua raises an error.
-"eq": the == (equal) operation. Behavior similar to the "add" operation, except that Lua will try a metamethod only when the values being compared are either both tables or both full userdata and they are not primitively equal. The result of the call is always converted to a boolean.
-"lt": the < (less than) operation. Behavior similar to the "add" operation, except that Lua will try a metamethod only when the values being compared are neither both numbers nor both strings. The result of the call is always converted to a boolean.
-"le": the <= (less equal) operation. Unlike other operations, The less-equal operation can use two different events. First, Lua looks for the "__le" metamethod in both operands, like in the "lt" operation. If it cannot find such a metamethod, then it will try the "__lt" event, assuming that a <= b is equivalent to not (b < a). As with the other comparison operators, the result is always a boolean.
-"index": The indexing access table[key]. This event happens when table is not a table or when key is not present in table. The metamethod is looked up in table.
-Despite the name, the metamethod for this event can be either a function or a table. If it is a function, it is called with table and key as arguments. If it is a table, the final result is the result of indexing this table with key. (This indexing is regular, not raw, and therefore can trigger another metamethod.)
+"add": + 操作。只要两个操作数中，任何一个不是number类型的，Lua就会尝试调用此元方法。Lua会先检查第一个操作数是否有此元方法，如果没有，再检查第二个操作数的元方法，如果存在，Lua会以此2个操作数作为参数调用此元方法。如果均不存在此元方法，Lua会报错。
+"sub": - 操作。与+类似。
+"mul": * 操作。与+类似。
+"div": / 操作。与+类似。
+"mod": % 操作。与+类似。
+"pow": ^(exponentiation 幂) 操作。与+类似。
+"unm": - 取反(unary minus) 操作。与+类似。
+"idiv": // (floor division) 操作。与+类似。
+"band": & 按位与操作。表现与+类似。除了：当操作数不是number类型也不是一个可以强制转换为integer的值(coercible to integer @3.4.3)。//TODO
+"bor": |　按位或操作，与＆类似。
+"bxor": ～按位异或操作，与＆类似。
+"bnot": ～按位取非操作(bitwise unary not)，与＆类似。
+"shl": ＜＜按位左移操作，与＆类似。
+"shr": ＞＞按位右移操作，与＆类似。
+"concat":　．．连接操作。与＋类似。但是只有当Lua发现两个操作数都不是string或者number（它始终能被强制转化会string）才会尝试。 
+"len": # (length) 取长度操作。当值不是一个string时，Lua会尝试此元方法。如果存在，Lua会调用此原方法并把该值作为第一个参数。如果不存在，那么如果该值是一个table，那么Lua会使用table的取长度方法（@3.4.7），否则报错。 
+"eq": == 操作。与+类似。只有当两个操作数都是table或者都是full userdata并且都不是primitively equal时才会触发。结果总是被转换成boolean。 
+"lt": <小于操作。与+类似。但是只有当两个操作数都不是number或者都不是string才会触发，结果会被转化成boolean。
+"le": <=小于等于操作。 与其它操作都不同。小于等于操作有两个事件名。Lua会先在两个操作数中寻找“__le”元方法，如果找到，则与lt类似。如果不能找到，lua会尝试使用“__lt”，假设a <= b 与 not（b < a）是一样的。结果总是boolean。**todo**
 
-"newindex": The indexing assignment table[key] = value. Like the index event, this event happens when table is not a table or when key is not present in table. The metamethod is looked up in table.
-Like with indexing, the metamethod for this event can be either a function or a table. If it is a function, it is called with table, key, and value as arguments. If it is a table, Lua does an indexing assignment to this table with the same key and value. (This assignment is regular, not raw, and therefore can trigger another metamethod.)
+"index": indexing access table[key]操作。当table不是table类型，或者key不在table中时触发。它的元方法可以是函数也可以是一个table。如果是函数，table 和key将作为它的参数。如果是一个table，那么结果将是对此元方法table的[key]操作的结果（而且此index是regular的，而不是raw，可能触发新的metamethod）。
 
-Whenever there is a "newindex" metamethod, Lua does not perform the primitive assignment. (If necessary, the metamethod itself can call rawset to do the assignment.)
+"newindex": indexing assignment table[key] = value。当table变量不是一个table或者没有key时触发。与index类似，元方法既可以是函数也可以是一个table。如果是一个函数，那么table,key,value将作为参数传入。如果是一个table，那么其结果是对此元方法table的[key]=value的结果。
 
-"call": The call operation func(args). This event happens when Lua tries to call a non-function value (that is, func is not a function). The metamethod is looked up in func. If present, the metamethod is called with func as its first argument, followed by the arguments of the original call (args).
-###2.5 – Garbage Collection
+无论是否有“newindex”方法，Lua不会执行primitive assignment。（如果必要，可以在metamethod中调用rawset来完成）。**primitive assignment 什么鬼**
 
-Lua performs automatic memory management. This means that you do not have to worry about allocating memory for new objects or freeing it when the objects are no longer needed. Lua manages memory automatically by running a garbage collector to collect all dead objects (that is, objects that are no longer accessible from Lua). All memory used by Lua is subject to automatic management: strings, tables, userdata, functions, threads, internal structures, etc.
+"call": call操作。当Lua尝试在非function类型的值上执行call操作时，Lua会检查此元方法。如果存在，则此元方法将被调用，并且此值将作为第一个参数传入此元方法，其它的参数将依次传入。**如果不存在，会报错**。
+       myvar(args)
+       getmetatable(myvar)["__call"](myvar, args)
 
-Lua implements an incremental mark-and-sweep collector. It uses two numbers to control its garbage-collection cycles: the garbage-collector pause and the garbage-collector step multiplier. Both use percentage points as units (e.g., a value of 100 means an internal value of 1).
 
-The garbage-collector pause controls how long the collector waits before starting a new cycle. Larger values make the collector less aggressive. Values smaller than 100 mean the collector will not wait to start a new cycle. A value of 200 means that the collector waits for the total memory in use to double before starting a new cycle.
+###2.5 – 垃圾收集（GC）
 
-The garbage-collector step multiplier controls the relative speed of the collector relative to memory allocation. Larger values make the collector more aggressive but also increase the size of each incremental step. You should not use values smaller than 100, because they make the collector too slow and can result in the collector never finishing a cycle. The default is 200, which means that the collector runs at "twice" the speed of memory allocation.
 
-If you set the step multiplier to a very large number (larger than 10% of the maximum number of bytes that the program may use), the collector behaves like a stop-the-world collector. If you then set the pause to 200, the collector behaves as in old Lua versions, doing a complete collection every time Lua doubles its memory usage.
+Lua会自己管理好内存，所以你在创建对象和释放对象时不必担心内存的获取与释放。Lua通过一个垃圾回收器（GC）搜集死了的对象，并释放它们。所有lua使用的对象都会被GC管理。
 
-You can change these numbers by calling lua_gc in C or collectgarbage in Lua. You can also use these functions to control the collector directly (e.g., stop and restart it).
 
-####2.5.1 – Garbage-Collection Metamethods
+Lua实现了一个增量的mark-and-sweep搜集器。它使用数字变量来控制垃圾回收循环：GC pause和GC step multiplier。它两都是0-100的整数。（percentage points as units）
 
-You can set garbage-collector metamethods for tables and, using the C API, for full userdata (see §2.4). These metamethods are also called finalizers. Finalizers allow you to coordinate Lua's garbage collection with external resource management (such as closing files, network or database connections, or freeing your own memory).
+GC pause控制GC运行的间隔时间。数值越大，那么GC就越懒惰。Pause小于100表示GC循环之间不会有停顿。如果是200，表示新循环在内存使用率为之前的2倍时才开始新的循环。
 
-For an object (table or userdata) to be finalized when collected, you must mark it for finalization. You mark an object for finalization when you set its metatable and the metatable has a field indexed by the string "__gc". Note that if you set a metatable without a __gc field and later create that field in the metatable, the object will not be marked for finalization. However, after an object has been marked, you can freely change the __gc field of its metatable.
+GC step multiplier控制着收集器运作速度相对于内存分配速度的倍率。 增大这个值不仅会让收集器更加积极，还会增加每个增量步骤的长度。 不要把这个值设得小于 100 ， 那样的话收集器就工作的太慢了以至于永远都干不完一个循环。 默认值是 200 ，这表示收集器以内存分配的“两倍”速工作。
 
-When a marked object becomes garbage, it is not collected immediately by the garbage collector. Instead, Lua puts it in a list. After the collection, Lua goes through that list. For each object in the list, it checks the object's __gc metamethod: If it is a function, Lua calls it with the object as its single argument; if the metamethod is not a function, Lua simply ignores it.
+如果你把step multiplier设为一个非常大的数字 （比你的程序可能用到的字节数还大 10% ）， 收集器的行为就像一个 stop-the-world 收集器。 接着你若把间歇率设为 200 ， 收集器的行为就和过去的 Lua 版本一样了： 每次 Lua 使用的内存翻倍时，就做一次完整的收集。
 
-At the end of each garbage-collection cycle, the finalizers for objects are called in the reverse order that the objects were marked for finalization, among those collected in that cycle; that is, the first finalizer to be called is the one associated with the object marked last in the program. The execution of each finalizer may occur at any point during the execution of the regular code.
+你可以通过在 C 中调用 lua_gc 或在 Lua 中调用 collectgarbage 来改变这俩数字。 这两个函数也可以用来直接控制收集器（例如停止它或重启它）。
 
-Because the object being collected must still be used by the finalizer, that object (and other objects accessible only through it) must be resurrected by Lua. Usually, this resurrection is transient, and the object memory is freed in the next garbage-collection cycle. However, if the finalizer stores the object in some global place (e.g., a global variable), then the resurrection is permanent. Moreover, if the finalizer marks a finalizing object for finalization again, its finalizer will be called again in the next cycle where the object is unreachable. In any case, the object memory is freed only in the GC cycle where the object is unreachable and not marked for finalization.
+####2.5.1 – 垃圾搜集元方法（cp cloudwu)
+你可以为表设定垃圾收集的元方法， 对于完全用户数据（参见 §2.4）， 则需要使用 C API 。 该元方法被称为 终结器。 终结器允许你配合 Lua 的垃圾收集器做一些额外的资源管理工作 （例如关闭文件、网络或数据库连接，或是释放一些你自己的内存）。
 
-When you close a state (see lua_close), Lua calls the finalizers of all objects marked for finalization, following the reverse order that they were marked. If any finalizer marks objects for collection during that phase, these marks have no effect.
+如果要让一个对象（表或用户数据）在收集过程中进入终结流程， 你必须 标记 它需要触发终结器。 当你为一个对象设置元表时，若此刻这张元表中用一个以字符串 "__gc" 为索引的域，那么就标记了这个对象需要触发终结器。 注意：如果你给对象设置了一个没有 __gc 域的元表，之后才给元表加上这个域， 那么这个对象是没有被标记成需要触发终结器的。 然而，一旦对象被标记， 你还是可以自由的改变其元表中的 __gc 域的。
 
-####2.5.2 – Weak Tables
+当一个被标记的对象成为了垃圾后， 垃圾收集器并不会立刻回收它。 取而代之的是，Lua 会将其置入一个链表。 在收集完成后，Lua 将遍历这个链表。 Lua 会检查每个链表中的对象的 __gc 元方法：如果是一个函数，那么就以对象为唯一参数调用它； 否则直接忽略它。
+
+在每次垃圾收集循环的最后阶段， 本次循环中检测到的需要被回收之对象， 其终结器的触发次序按当初给对象作需要触发终结器的标记之次序的逆序进行； 这就是说，第一个被调用的终结器是程序中最后一个被标记的对象所携的那个。 每个终结器的运行可能发生在执行常规代码过程中的任意一刻。
+
+由于被回收的对象还需要被终结器使用， 该对象（以及仅能通过它访问到的其它对象）一定会被 Lua 复活。 通常，复活是短暂的，对象所属内存会在下一个垃圾收集循环释放。 然后，若终结器又将对象保存去一些全局的地方 （例如：放在一个全局变量里），这次复活就持续生效了。 此外，如果在终结器中对一个正进入终结流程的对象再次做一次标记让它触发终结器， 只要这个对象在下个循环中依旧不可达，它的终结函数还会再调用一次。 无论是哪种情况， 对象所属内存仅在垃圾收集循环中该对象不可达且 没有被标记成需要触发终结器才会被释放。
+
+当你关闭一个状态机（参见 lua_close）， Lua 将调用所有被标记了需要触发终结器对象的终结过程， 其次序为标记次序的逆序。 在这个过程中，任何终结器再次标记对象的行为都不会生效。
+
+####2.5.2 – 弱表
 
 A weak table is a table whose elements are weak references. A weak reference is ignored by the garbage collector. In other words, if the only references to an object are weak references, then the garbage collector will collect that object.
+一个弱表是一个所有元素都是弱引用的表。弱引用会被GC忽略。即，当对某对象的引用只有弱引用时，垃圾搜集器会搜集此对象。
 
 A weak table can have weak keys, weak values, or both. A table with weak keys allows the collection of its keys, but prevents the collection of its values. A table with both weak keys and weak values allows the collection of both keys and values. In any case, if either the key or the value is collected, the whole pair is removed from the table. The weakness of a table is controlled by the __mode field of its metatable. If the __mode field is a string containing the character 'k', the keys in the table are weak. If __mode contains 'v', the values in the table are weak.
 
+一个弱表可以有弱的键、弱的值或者都有。一个具有弱键的表允许GC搜集它的键但不允许搜集其值。一个具有弱键和弱值的表允许GC搜集其键和表。在任何情况下，只要键值对中的一个被GC搜集了，那么这整个键值对都会从此表中被移出。一个表的弱特性由其元表的“__mode”键的值所控制。如果此键值包含'k'那么表中的键是弱的，同样的，如果包含'v'，则表的值是弱的。
+
+
 A table with weak keys and strong values is also called an ephemeron table. In an ephemeron table, a value is considered reachable only if its key is reachable. In particular, if the only reference to a key comes through its value, the pair is removed.
 
-Any change in the weakness of a table may take effect only at the next collect cycle. In particular, if you change the weakness to a stronger mode, Lua may still collect some items from that table before the change takes effect.
+一个具有弱键强值的表又被称为蜉蝣表（生命周期极短）。在一个蜉蝣表中，一个值只有当键是可达的时候才被认为是可达的。也就是说，当对key的唯一的引用来自其值时，此键值对将被移出。**注意可达性的概念**
 
+Any change in the weakness of a table may take effect only at the next collect cycle. In particular, if you change the weakness to a stronger mode, Lua may still collect some items from that table before the change takes effect.
+任何对表的弱性的改变只会在下一个GC周期中生效。比如，你加强了弱性，Lua依旧会搜集一些弱的元素，直到下一次GC周期。
 Only objects that have an explicit construction are removed from weak tables. Values, such as numbers and light C functions, are not subject to garbage collection, and therefore are not removed from weak tables (unless their associated values are collected). Although strings are subject to garbage collection, they do not have an explicit construction, and therefore are not removed from weak tables.
+
+只有具有明确的构建行为的对象才会被GC从弱表中移除。值，比如number以及light C函数，都不是GC的处理对象，因而 它们不会被从弱表中移除，除非它们关联的键或值被搜集了。虽然string是GC的对象，但是由于它没有显式的构建过程，所以也不会被从弱表中移除。**TODO？？**
 
 Resurrected objects (that is, objects being finalized and objects accessible only through objects being finalized) have a special behavior in weak tables. They are removed from weak values before running their finalizers, but are removed from weak keys only in the next collection after running their finalizers, when such objects are actually freed. This behavior allows the finalizer to access properties associated with the object through weak tables.
 
 If a weak table is among the resurrected objects in a collection cycle, it may not be properly cleared until the next cycle.
+弱表针对复活的对象 （指那些正在走终结流程，仅能被终结器访问的对象） 有着特殊的行为。 弱值引用的对象，在运行它们的终结器前就被移除了， 而弱键引用的对象则要等到终结器运行完毕后，到下次收集当对象真的被释放时才被移除。 这个行为使得终结器运行时得以访问到由该对象在弱表中所关联的属性。
 
-###2.6 – Coroutines
+如果一张弱表在当次收集循环内的复活对象中， 那么在下个循环前这张表有可能未被正确地清理。
+###2.6 – 协程
 
 Lua supports coroutines, also called collaborative multithreading. A coroutine in Lua represents an independent thread of execution. Unlike threads in multithread systems, however, a coroutine only suspends its execution by explicitly calling a yield function.
+Lua支持协程，它也被称为协作式的多线程。Lua中的一个协程表示一个独立的执行序列。与多线程系统中的线程不同，协程只有当明确的调用yield函数时，该执行序列才会暂停。
 
 You create a coroutine by calling coroutine.create. Its sole argument is a function that is the main function of the coroutine. The create function only creates a new coroutine and returns a handle to it (an object of type thread); it does not start the coroutine.
+你可以通过调用coroutine.create函数来创建一个协程。它的唯一的参数是一个函数，它将作为协程的函数体。这个创建函数只是创建了一个协程对象，但并没有运行此协程。
 
 You execute a coroutine by calling coroutine.resume. When you first call coroutine.resume, passing as its first argument a thread returned by coroutine.create, the coroutine starts its execution, at the first line of its main function. Extra arguments passed to coroutine.resume are passed as arguments to the coroutine's main function. After the coroutine starts running, it runs until it terminates or yields.
+你可以通过coroutine.resume方法来执行某个协程。当你首次调用coroutine.resume时，第一个参数是由coroutine.create返回thread类型的值，其主函数将会从第一行开始执行，其它传入resume的参数，将作为主函数的参数。一个协程会运行，直到它结束或者调用yield才会停止。
+
 
 A coroutine can terminate its execution in two ways: normally, when its main function returns (explicitly or implicitly, after the last instruction); and abnormally, if there is an unprotected error. In case of normal termination, coroutine.resume returns true, plus any values returned by the coroutine main function. In case of errors, coroutine.resume returns false plus an error message.
-
+一个协程可以通过2个方法结束它的执行。一般的，协程的主函数返回了。或者，异常的，一个不被保护的error出现了。在一般的结束时，coroutine.resume会返回true，和其它由协程主函数返回的值。在出错情况下，coroutine.resume会返回false，和一个error message。
 A coroutine yields by calling coroutine.yield. When a coroutine yields, the corresponding coroutine.resume returns immediately, even if the yield happens inside nested function calls (that is, not in the main function, but in a function directly or indirectly called by the main function). In the case of a yield, coroutine.resume also returns true, plus any values passed to coroutine.yield. The next time you resume the same coroutine, it continues its execution from the point where it yielded, with the call to coroutine.yield returning any extra arguments passed to coroutine.resume.
+一个协程可以调用coroutine.yield函数来让出。当一个协程让出时，对应的coroutine.resume调用会立即返回，即使yield发生在主函数直接或间接的调用的函数内。当yield时，coroutine.resume也会返回true，和coroutine.yield调用时传入的参数。当下次你resume这个协程时，它会从yield的地方继续执行，即在协程内部coroutine.yield返回了并且返回了在外部传入coroutine.resume的参数。
 
 Like coroutine.create, the coroutine.wrap function also creates a coroutine, but instead of returning the coroutine itself, it returns a function that, when called, resumes the coroutine. Any arguments passed to this function go as extra arguments to coroutine.resume. coroutine.wrap returns all the values returned by coroutine.resume, except the first one (the boolean error code). Unlike coroutine.resume, coroutine.wrap does not catch errors; any error is propagated to the caller.
 
-As an example of how coroutines work, consider the following code:
+与coroutine.create一样，coroutien.wrap也能够创建coroutine，但它不会返回一个协程对象，而是返回一个函数对象，当它被调用，所创建的不具名的协程将被resume。此函数是对不具名的协程对象与coroutine.resume的包装，传入其的参数将作为resume的参数，resume返回的值将成为此函数的返回值。但是，此函数不会返回错误信息，即resume返回的第一个值。也就是说，此函数与coroutine.resume不同，它不会补货任何的错误，任何的错误将被扩散到它的caller。
+
+下面是一个协程的示例：
 
      function foo (a)
        print("foo", a)
@@ -263,7 +369,7 @@ As an example of how coroutines work, consider the following code:
      print("main", coroutine.resume(co, "r"))
      print("main", coroutine.resume(co, "x", "y"))
      print("main", coroutine.resume(co, "x", "y"))
-When you run it, it produces the following output:
+上面的代码运行后会输出如下内容：
 
      co-body 1       10
      foo     2
@@ -273,7 +379,7 @@ When you run it, it produces the following output:
      co-body x       y
      main    true    10      end
      main    false   cannot resume dead coroutine
-You can also create and manipulate coroutines through the C API: see functions lua_newthread, lua_resume, and lua_yield.
+你还可以通过C API来创建和操纵协程，参见：lua_newthread, lua_resume 和 lua_yield。
 
 ##3 – 语言
 
