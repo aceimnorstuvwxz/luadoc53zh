@@ -1,0 +1,2 @@
+    <string name="tp_cms_err_success">成功</string>
+    <string name="tp_cms_err_generic">未知错误</string>

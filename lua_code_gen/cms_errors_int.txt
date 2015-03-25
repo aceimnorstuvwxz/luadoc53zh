@@ -1,0 +1,2 @@
+public static final int ERROR_SUCCESS = ﻿0;
+public static final int ERROR_GENERIC = -10000;

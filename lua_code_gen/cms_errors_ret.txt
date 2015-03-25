@@ -1,0 +1,2 @@
+case ERROR_SUCCESS: return res.getString(android.R.string.tp_cms_err_success);
+case ERROR_GENERIC: return res.getString(android.R.string.tp_cms_err_generic);

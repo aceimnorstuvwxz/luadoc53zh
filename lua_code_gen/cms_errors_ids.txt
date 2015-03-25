@@ -1,0 +1,2 @@
+  <public type="string" name="tp_cms_err_success" id="0x7f040132" />
+  <public type="string" name="tp_cms_err_generic" id="0x7f040133" />
