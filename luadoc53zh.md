@@ -391,29 +391,32 @@ Lua支持协程，它也被称为协作式的多线程。Lua中的一个协程�
      main    false   cannot resume dead coroutine
 你还可以通过C API来创建和操纵协程，参见：lua_newthread, lua_resume 和 lua_yield。
 
-##3 – 语言
+##3 – 语言定义
+
+这一章描述了Lua的词法、语法和语义。
+
+我们使用扩展的BNF范式来描述语法。例如{a}表示0或多个a，[a]表示0或1个a，非终结符以普通文本表述，关键词会加粗
 
 本章介绍Lua的文本。
 
-文本介绍时，我们会使用BNF范式来描述语言规则（见编译原理），例如：{a}表示0个或更多的a，[a]表示0个或1个a。关于终结词等定义请看编译原理。
+文本介绍时，我们会使用BNF范式来描述语言规则（见编译原理），例如：{a}表示0个或更多的a，[a]表示0个或1个a。 非终结符会这样写 non-terminal ， 关键字会写成这样 kword， 而其它终结符则写成这样 ‘=’ 。完整的语法见@9。
 
-###3.1 – 文本约定
+###3.1 – 语法约定
 
-lua是格式自由的，它忽略所有的white space和comments，只把它们作为names和keyword的分隔符。
+Lua是格式自由的，它忽略所有的white space和comments，只把它们作为names和keyword的分隔符。
 
-identifiers可有由下划线、字母和数字组成，但不能以数字开头。所有的name variable和table fields和label。
+Identifiers可有由下划线、字母和数字组成，但不能以数字开头。所有的name variable和table fields和label都是identifier。
 
-下面这些作为关键词被语言保留：
+下面这些关键词被语言保留：
 
      and       break     do        else      elseif    end
      false     for       function  goto      if        in
      local     nil       not       or        repeat    return
      then      true      until     while
 
-Lua是大小写敏感的，所以and时一个保留关键字，但ＡＮＤ和And就是合法的identifier。作为惯例，程序应该**避免**创建以_打头的大写字母序列为name，比如_VERSION.
+Lua是大小写敏感的，所以and是一个保留关键字，但AND和And是合法的identifier。作为惯例，程序应该避免创建以_打头的大写字母序列作为name，比如_VERSION。
 
 下面这些文本表示其他的一些tokens:
-**TODO 有些operator没见过厚**
 
      +     -     *     /     %     ^     #
      &     ~     |     <<    >>    //
@@ -421,14 +424,14 @@ Lua是大小写敏感的，所以and时一个保留关键字，但ＡＮＤ和An
      (     )     {     }     [     ]     ::
      ;     :     ,     .     ..    ...
 
-literal strings由'或者"来分隔，同时可以包含\a，\b，\f，\n，\r，\t，\v，\\，\"，\'等。\(回车)表示一个newline。'\z'会跳过后续的white-space字符。(空格，TAB）
+字节序列可以由单括号或者双括号来括起，同时可以包含\a，\b，\f，\n，\r，\t，\v，\\，\"，\'等。\(回车)表示一个newline。'\z'会跳过后续的white-space字符。
 
-lua的strings可以包含任何8-bit的值，包括\0。更普通的，我们可以用数字值来表达任何byte，可以使用\xXX或者\ddd（XX表十六进制的一个byte刚好，ddd最大到256你懂的）。注意\23是错误的，必须是\023。
+Lua的strings可以包含任何8-bit的值，包括\0。更普通的，我们可以用数字值来表达任何byte，可以使用\xXX或者\ddd（XX表十六进制的一个byte刚好，ddd最大到256你懂的）。注意\23是错误的，必须是\023。
 
 UTF-8的unicode字符可以插入其中用，\u{XXX}来表示，其中XXX可以是1或多个十六进制数字。
 	str = "c\u{2b}\u{2b}"
 	print(str)//c++
-**TODO中文怎么搞**
+
 
 the opening long bracket
 [[string]]
@@ -436,9 +439,7 @@ the opening long bracket
 [[               一个约定：这里的换行为了方便会省略
 string]]
 
-
-**TODO**
-Any byte in a literal string not explicitly affected by the previous rules represents itself. However, Lua opens files for parsing in text mode, and the system file functions may have problems with some control characters. So, it is safer to represent non-text data as a quoted literal with explicit escape sequences for non-text characters.
+字面串中的每个不被上述规则影响的字节都呈现为本身。 然而，Lua 是用文本模式打开源文件解析的， 一些系统的文件操作函数对某些控制字符的处理可能有问题。 因此，对于非文本数据，用引号括起来并显式按转义符规则来表述更安全。
 
 下面都是一样的：
 
@@ -465,13 +466,13 @@ Any byte in a literal string not explicitly affected by the previous rules repre
 
 ###3.2 – 变量
 
-变量是用来存放值的。lua中有三种变量，分别是全局（global）、局部（local）和table fields。
+变量是用来存放值的。Lua中有三种变量，分别是全局（global）、局部（local）和table fields。
 
-一个单一的identifier可以表示一个局部或者全局的变量。（而方法的参数，一种特殊的局部变量）
+一个单一的identifier可以表示一个局部或者全局的变量，而函数的参数，一种特殊的局部变量。
 
 	var ::= Name
 
-任何indentifier除非显式的指明是local，否则都是global。局部变量时文本限制的(lexically scoped)，同时局部变量能够被定义在该scope中的function自由访问。
+任何indentifier除非显式的指明是local，否则都是global。局部变量是限定作用范围的，局部变量只能够被定义在该scope中的function自由访问。
 
 任何变量，在首次assignment之前的值是nil。
 
@@ -480,78 +481,64 @@ Any byte in a literal string not explicitly affected by the previous rules repre
 	var ::= prefixexp ‘[’ exp ‘]’
 这个过程的具体意义可以通过改变metatables来改变。
 
-syntactic sugar var.Name和var["name']是一样的。
+var.Name和var["Name']是一样的。
 
 	var ::= prefixexp ‘.’ Name
-*An access to a global variable x is equivalent to _ENV.x. Due to the way that chunks are compiled, _ENV is never a global name (see §2.2).*
+对全局变量 x 的操作等价于操作 _ENV.x。 由于代码块编译的方式， _ENV 永远也不可能是一个全局名字。
 
-###3.3 – statements
+###3.3 – 语句
 
-lua支持与pascal或者c相似的传统的语句。包括assignments，control structures, function calls和variable declarations.
+Lua支持与pascal或者c相似的传统的语句。包括assignments，control structures, function calls和variable declarations.
 
-####3.3.1 – Blocks
+####3.3.1 – 语句块(block)
 
 一个block是一系列statement，它们顺序执行。
 
 	block ::= {stat}
-lua有个空statements。你可以用;来分隔statements或者do ; end 或者;;.（主要就是为了让;在Lua中变得合法，而实际上他也就是为了让c程序员随便加个;也不会出错而已）
+Lua有个空statements。你可以用;来分隔statements或者do ; end 或者;;.（主要就是为了让;在Lua中变得合法，而实际上他也就是为了让c程序员随便加个;也不会出错而已）
 
 	stat ::= ‘;’
 
-function calls和assignments都能够以（开始。这回导致一些ambiguity。如下是一些例子：
+function calls和assignments都能够以（开始。这回导致一些ambiguity。如下这个例子：
 
      a = b + c
      (print or io.write)('done')
-The grammar could see it in two ways:
+从语法上说，可能有如下两种解释：
 
      a = b + c(print or io.write)('done')
      
      a = b + c; (print or io.write)('done')
-The current parser always sees such constructions in the first way, interpreting the open parenthesis as the start of the arguments to a call. To avoid this ambiguity, it is a good practice to always precede with a semicolon statements that start with a parenthesis:
+当前的解释器会采用第一种解释，即，把变量名后的小括号看成是函数调用。可以在以小括号开始的语句前面加“；”来避免这种歧义：
 
      ;(print or io.write)('done')
-A block can be explicitly delimited to produce a single statement:
+可以使用do end显式地为一个块定界：
 
 	stat ::= do block end
-Explicit blocks are useful to control the scope of variable declarations. Explicit blocks are also sometimes used to add a return statement in the middle of another block (see §3.3.4).
-用do end来做block等。
-在行末加;是好习惯。
+通常用来控制局部变量的作用域。有时显式定块届也被用来在语句块的中间插入return，因为从语法上来讲return只能出现在一个block的尾部。
 
-###3.3.2 – Chunks（厚厚的一块）
+###3.3.2 – Chunk
 
-The unit of compilation of Lua is called a chunk. Syntactically, a chunk is simply a block:
-Chunk其实就是block。
+Lua的编译单元被叫做chunk，从句法结构上讲，一个chunk也是一个block。
 
 	chunk ::= block
-Lua handles a chunk as the body of an anonymous function with a variable number of arguments (see §3.4.11). As such, chunks can define local variables, receive arguments, and return values. Moreover, such anonymous function is compiled as in the scope of an external local variable called _ENV (see §2.2). The resulting function always has _ENV as its only upvalue, even if it does not use that variable.
-Lua把chunk当做一个匿名function，加上一些传入的参数。所以，chunk可以像function一样，定义local variables，使用传入的参数，并且return values.更多的，这种匿名的function在编译时加入了一个外部local变量叫做_ENV。the resulting function 总是把_ENV作为它唯一的upvalue，即使function中没有使用_ENV。
+Lua把chunk当做一个有参数的匿名function。所以，chunk可以像function一样，定义local variables，使用传入的参数，并且return values。此外，这种匿名的function在编译时还会为其作用域绑定入一个外部local变量_ENV。这个匿名函数总是会把_ENV作为它唯一的upvalue，即使此函数代码中没有使用_ENV，此upvalue也是存在的。
 
-A chunk can be stored in a file or in a string inside the host program. To execute a chunk, Lua first loads it, precompiling the chunk's code into instructions for a virtual machine, and then Lua executes the compiled code with an interpreter for the virtual machine.
-一个chunk可以被放在文件中，或者一个host pragram的string内。要执行一个chunk，你必须要让Lua加载它，编译chunk的代码为虚拟机的机器码，然后让lua的解释器来执行。
+一个chunk可以被放在文件中，或者host pragram的某个string内。要执行一个chunk，你要让Lua先加载它，并将chunk的代码编译为虚拟机的机器码，然后让Lua的解释器来执行。
 
-Chunks can also be precompiled into binary form; see program luac and function string.dump for details. Programs in source and compiled forms are interchangeable; Lua automatically detects the file type and acts accordingly (see load).
-chunk同样可以被编译成二进制形式。用luac即可。被编译成二进制形式的代码和原始代码是可以互相转换的。lua能够自动的识别是编译过的还是原始代码，然后正确执行。
+Chunk同样可以被编译成二进制形式，参见程序 luac 以及函数 string.dump 可获得更多细节。被编译成二进制形式的代码和原始代码是可以互相替换的。Lua能够自动的识别是编译过的还是原始代码，然后正确执行。
 
-###3.3.3 – Assignment
+###3.3.3 – 赋值
 
-Lua allows multiple assignments. Therefore, the syntax for assignment defines a list of variables on the left side and a list of expressions on the right side. The elements in both lists are separated by commas:
-Lua支持多项复制。如下：
+
+Lua支持多重赋值，其语法定义为等号左边有一个变量列表，而右边有一个表达式列表：
 
 	stat ::= varlist ‘=’ explist
 	varlist ::= var {‘,’ var}
 	explist ::= exp {‘,’ exp}
-Expressions are discussed in §3.4.
+表达式将在@3.4中讨论。
 
-Before the assignment, the list of values is adjusted to the length of the list of variables. If there are more values than needed, the excess values are thrown away. If there are fewer values than needed, the list is extended with as many nil's as needed. If the list of expressions ends with a function call, then all values returned by that call enter the list of values, before the adjustment (except when the call is enclosed in parentheses; see §3.4).
+在赋值之前，右边的值序列会被调整到与左边变量相同的个数。如果右边多了，那么多余的将被剔除。如果右边少了，那么缺少的将用nil顶替。如果右边的最后一项是函数调用，那么该函数调用将被执行，并且其所有的返回结果会被加入到右边序列中。如果function call在中间，则只取return的第一个值，如果没有return，则是nil。
 
-在assignment执行前，右边的列表将被调整到和左边的列表一样长。如果右边多，则右边多余的会被省略。
-	a, b = c, d, e
-	a, b = c, d
-如果左边多，则右边用nil填充。
-    a, b, c = x, y
-    a, b, c = x, y, nil
-如果右边以function call**结尾**，则此function的return的value将进入到右边列表里
-如果function call在中间，则只取return的第一个值，如果没有return，则是nil
 
 	function a()
 		return 11,13
@@ -566,9 +553,7 @@ Before the assignment, the list of values is adjusted to the length of the list 
     x,y,z = b(),a()
     print(x,y,z) //nil,11,13
 
-
-The assignment statement first evaluates all its expressions and only then the assignments are performed. Thus the code
-assignment会先evaluate所有的表达式，之后在进行assign。
+Assignment会先evaluate所有的表达式，之后在进行assign。
      i = 3
      i, a[i] = i+1, 20
      print(i, a[3]) // 4 20
@@ -578,69 +563,56 @@ assignment会先evaluate所有的表达式，之后在进行assign。
      print(x, y) //13  12
 
      x, y, z = y, z, x
-cyclically permutes the values of x, y, and z.
 
-The meaning of assignments to global variables and table fields can be changed via metatables. An assignment to an indexed variable t[i] = val is equivalent to settable_event(t,i,val). (See §2.4 for a complete description of the settable_event function. This function is not defined or callable in Lua. We use it here only for explanatory purposes.)
+
 给全局变量和table field的assign操作可以通过修改metatables来改变语义。
 
-An assignment to a global name x = val is equivalent to the assignment _ENV.x = val (see §2.2).
 对全局变量x=val的赋值，等价于_ENV.x = val；
 
-###3.3.4 – 逻辑控制结构
+###3.3.4 – 控制结构
 
-The control structures if, while, and repeat have the usual meaning and familiar syntax:
-逻辑控制结构包裹if,while,repeat。它们有着传统的语义。
+逻辑控制结构包裹if,while,repeat。它们有着传统的语义:
 
 	stat ::= while exp do block end
 	stat ::= repeat block until exp
 	stat ::= if exp then block {elseif exp then block} [else block] end
-Lua also has a for statement, in two flavors (see §3.3.5).
-同时lua还有2种形式的for语句。
 
-The condition expression of a control structure can return any value. Both false and nil are considered false. All values different from nil and false are considered true (in particular, the number 0 and the empty string are also true).
-逻辑控制语句的表达式可以返回任何值，其中false和nil都是false，其它的所有值都被认为true，包括0和空string。
+Lua还有2种形式的for语句。
 
-In the repeat–until loop, the inner block does not end at the until keyword, but only after the condition. So, the condition can refer to local variables declared inside the loop block.
-在repeat-until循环中，内部的Block直到Until的条件expression后才结束。也就是说condition表达式中可以使用循环block中的Local variable。
+控制结构中的条件表达式可以返回任何值。但只有false和nil是假的，其它的都是真，包括0和空string。
 
-The goto statement transfers the program control to a label. For syntactical reasons, labels in Lua are considered statements too:
-goto将代码跑到指定的label。就语法层面的原因，在lua中lebel也是一个statement:
+在repeat-until循环中，内部的Block直到Until的条件expression后才结束。也就是说condition表达式中可以使用循环block中的local variable。
+
+Goto将代码跑到指定的label。就语法层面的原因，在lua中lebel也是一个statement:
 
 	stat ::= goto Name
 	stat ::= label
 	label ::= ‘::’ Name ‘::’
-A label is visible in the entire block where it is defined, except inside nested blocks where a label with the same name is defined and inside nested functions. **A goto may jump to any visible label as long as it does not enter into the scope of a local variable.** **TODO 不懂**
-一个label在整个所在定义的block内可见，包括nested block，除非nested block中定义了一样的名字。
+一个label在整个所在定义的block内可见，包括nested block，除非nested block中定义了一样的名字。只要 goto 没有进入一个新的局部变量的作用域，它可以跳转到任意可见label。
 
-Labels and empty statements are called void statements, as they perform no actions.
-label和空statements(;)被叫做void statements，他们不执行任何操作。
+label和空statements“；”被叫做void statements，他们不执行任何操作。
 
-The break statement terminates the execution of a while, repeat, or for loop, skipping to the next statement after the loop:
-break有传统的语义。
+break有传统的语义，它被用来结束 while、 repeat、或 for 循环， 它将使程序跳到循环外之后的语句继续运行：
+
 	stat ::= break
-A break ends the innermost enclosing loop.
-break有传统的语义。
+break 跳出最内层的循环。
 
-The return statement is used to return values from a function or a chunk (which is an anonymous function). Functions can return more than one value, so the syntax for the return statement is
-return用来从function或者chunk（等价于匿名函数）返回values。函数可以返回多余一个的值。
+return用来从function或者chunk（等价于匿名函数）返回values。函数可以返回多个值。
 	stat ::= return [explist] [‘;’]
-The return statement can only be written as the last statement of a block. If it is really necessary to return in the middle of a block, then an explicit inner block can be used, as in the idiom do return end, because now return is the last statement in its (inner) block.
-return只能作为一个block的最后一个语句。如果有必要在一个block的中间return回去，那么可以用nested block，比如do return xxx end等。
 
-###3.3.5 – For Statement
+return只能写在一个block的最后一个语句。如果有必要在一个block的中间return回去，那么可以用nested block，比如do return xxx end等。
 
-The for statement has two forms: one numeric and one generic.
-for循环语句有两种不同的形式，分别是传统的数值形式和普通形式的。
+###3.3.5 – For 语句
 
-The numeric for loop repeats a block of code while a control variable runs through an arithmetic progression. It has the following syntax:
-numeric类型的for循环的语法：
+for循环语句有两种不同的形式，分别是数值形式和通用形式的。
+
+数值类型的for循环的语法：
 
 	stat ::= for Name ‘=’ exp ‘,’ exp [‘,’ exp] do block end
-The block is repeated for name starting at the value of the first exp, until it passes the second exp by steps of the third exp. More precisely, a for statement like
 就那样执行，比如：
 
      for v = e1, e2, e3 do block end
-is equivalent to the code:
+的意思是:
 
      do
        local var, limit, step = tonumber(e1), tonumber(e2), tonumber(e3)
@@ -655,33 +627,25 @@ is equivalent to the code:
          block
        end
      end
-Note the following:
+注意一下几点：
 
-All three control expressions are evaluated only once, before the loop starts. They must all result in numbers.
 3个控制表达式在循环开始前都会被计算，并且均只计算一次，而且其结果都必须是numebr。
-var, limit, and step are invisible variables. The names shown here are for explanatory purposes only.
-If the third expression (the step) is absent, then a step of 1 is used.
 如果numberic loop的第三个expression缺失了，那么默认的step就是1.
-You can use break and goto to exit a for loop
 你可以使用break或者goto来退出一个for-loop。
-The loop variable v is local to the loop body. If you need its value after the loop, assign it to another variable before exiting the loop.
 loop变量v对于循环体来说是local variable。如果在循环结束后还需要它的值，那么在退出loop之前，把它付给外面变量的，否则将要丢失。
 	
 	for v = 1, 13, 3 do 
 		print (v)
 	end //1 4 7 10 13
-**注意哦condition判断都是有>= 或者<=的厚。**
+**注意condition判断都是有>= 或者<=的。**
 
-The generic for statement works over functions, called iterators. On each iteration, the iterator function is called to produce a new value, stopping when this new value is nil. The generic for loop has the following syntax:
-generic的for循环，能够工作在functions和called iterators上。
+通用的for循环，能够工作在functions和called iterators上。
 
 	stat ::= for namelist in explist do block end
 	namelist ::= Name {‘,’ Name}
 A for statement like
 
      for var_1, ···, var_n in explist do block end
-is equivalent to the code:
-
 记住下面这个语义即可：
      do
        local f, s, var = explist
@@ -692,40 +656,34 @@ is equivalent to the code:
          block
        end
      end
-Note the following:
-**TODO iterators generic for-loop**
-**explist is evaluated only once. Its results are an iterator function, a state, and an initial value for the first iterator variable.**
-f, s, and var are invisible variables. The names are here for explanatory purposes only.
-You can use break to exit a for loop.
-The loop variables var_i are local to the loop; you cannot use their values after the for ends. If you need these values, then assign them to other variables before breaking or exiting the loop.
-loop variables是局部变量，在loop结束后是不见的，所以如果需要在scope后继续使用，请在loop exit前把这些loop variable赋值给Outside变量。
+注意以下几点：
 
-###3.3.6 – Function Calls as Statements
+- explist 只会被计算一次。 它返回三个值， 一个 迭代器 函数， 一个 状态， 一个 迭代器的初始值。
+- f， s，与 var 都是不可见的变量。 这里给它们起的名字都只是为了解说方便。
+- 你可以使用 break 来跳出 for 循环。
+- 环变量 var_i 对于循环来说是一个局部变量；
+- 你不可以在 for 循环结束后继续使用。
+- 如果你需要保留这些值，那么就在循环跳出或结束前赋值到别的变量里去。
 
-To allow possible side-effects, function calls can be executed as statements:
-函数调用可以作为statement执行。
+###3.3.6 – 函数调用语法
+
+为了允许使用函数的副作用（Side effect），函数调用可以作为statement执行。
 
 	stat ::= functioncall
-In this case, all returned values are thrown away. Function calls are explained in §3.4.10.
 在这个情况下，所有的返回values都会被丢弃。
 
-###3.3.7 – Local Declarations
+###3.3.7 – 局部声明
 局部变量可以再block的任何位置定义，并且可以附带一个初始的assignment。
-Local variables can be declared anywhere inside a block. The declaration can include an initial assignment:
 
 	stat ::= local namelist [‘=’ explist]
-If present, an initial assignment has the same semantics of a multiple assignment (see §3.3.3). Otherwise, all variables are initialized with nil.
 这种用来初始化local variables的assignments和普通的multiple assignment具有一致的语义。local variable如果没有initial assignment那么它们会被初始化为nil。
 
-A chunk is also a block (see §3.3.2), and so local variables can be declared in a chunk outside any explicit block.
-chunk也是block。所以local variables可以在chunk中定义。
-The visibility rules for local variables are explained in §3.5.
-local variables的可见性定义在3.5.
+chunk是block。所以local variables可以在chunk中定义。
+local variables的可见性见@3.5.
 
-##3.4 – Expressions
+##3.4 – 表达式
 
-The basic expressions in Lua are the following:
-lua的基本表达式有如下：
+Lua有下面这些基本表达式：
 	exp ::= prefixexp
 	exp ::= nil | false | true
 	exp ::= Numeral
@@ -736,69 +694,62 @@ lua的基本表达式有如下：
 	exp ::= exp binop exp
 	exp ::= unop exp
 	prefixexp ::= var | functioncall | ‘(’ exp ‘)’
-Numerals and literal strings are explained in §3.1; variables are explained in §3.2; function definitions are explained in §3.4.11; function calls are explained in §3.4.10; table constructors are explained in §3.4.9. Vararg expressions, denoted by three dots ('...'), can only be used when directly inside a vararg function; they are explained in §3.4.11.
+数字和字面串在 §3.1 中解释； 变量在 §3.2 中解释； 函数定义在 §3.4.11 中解释； 函数调用在 §3.4.10 中解释； 表的构造在 §3.4.9 中解释。 可变参数的表达式写作三个点（'...'）， 它只能在有可变参数的函数中直接使用；这些在 §3.4.11 中解释。
 
-Binary operators comprise arithmetic operators (see §3.4.1), bitwise operators (see §3.4.2), relational operators (see §3.4.4), logical operators (see §3.4.5), and the concatenation operator (see §3.4.6). Unary operators comprise the unary minus (see §3.4.1), the unary bitwise not (see §3.4.2), the unary logical not (see §3.4.5), and the unary length operator (see §3.4.7).
+二元操作符包含有数学运算操作符（参见 §3.4.1）， 位操作符（参见 §3.4.2）， 比较操作符（参见 §3.4.4）， 逻辑操作符（参见 §3.4.5）， 以及连接操作符（参见 §3.4.6）。 一元操作符包括负号（参见 §3.4.1）， 按位非（参见 §3.4.2）， 逻辑非（参见 §3.4.5）， 和取长度操作符（参见 §3.4.7）。
 
-Both function calls and vararg expressions can result in multiple values. If a function call is used as a statement (see §3.3.6), then its return list is adjusted to zero elements, thus discarding all returned values. If an expression is used as the last (or the only) element of a list of expressions, then no adjustment is made (unless the expression is enclosed in parentheses). In all other contexts, Lua adjusts the result list to one element, either discarding all values except the first one or adding a single nil if there are no values.
+函数调用和可变参数表达式都可以放在多重返回值中。 如果函数调用被当作一条语句（参见 §3.3.6）， 其返回值列表被调整为零个元素，即抛弃所有的返回值。 如果表达式被用于表达式列表的最后（或是唯一的）一个元素， 那么不会做任何调整（除非表达式被括号括起来）。 在其它情况下， Lua 都会把结果调整为一个元素置入表达式列表中， 即保留第一个结果而忽略之后的所有值，或是在没有结果时， 补单个 nil。
 一些多varlist的规则：
 
-Here are some examples:
+这里有一些例子：
 
-     f()                -- adjusted to 0 results
-     g(f(), x)          -- f() is adjusted to 1 result
-     g(x, f())          -- g gets x plus all results from f()
-     a,b,c = f(), x     -- f() is adjusted to 1 result (c gets nil)
-     a,b = ...          -- a gets the first vararg parameter, b gets
-                        -- the second (both a and b can get nil if there
-                        -- is no corresponding vararg parameter)
-     
-     a,b,c = x, f()     -- f() is adjusted to 2 results
-     a,b,c = f()        -- f() is adjusted to 3 results
-     return f()         -- returns all results from f()
-     return ...         -- returns all received vararg parameters
-     return x,y,f()     -- returns x, y, and all results from f()
-     {f()}              -- creates a list with all results from f()
-     {...}              -- creates a list with all vararg parameters
-     {f(), nil}         -- f() is adjusted to 1 result
-Any expression enclosed in parentheses always results in only one value. Thus, (f(x,y,z)) is always a single value, even if f returns several values. (The value of (f(x,y,z)) is the first value returned by f or nil if f does not return any values.)
-在圆括号内的表达式的值最后都会只有一个value。
+     f()                -- 调整为0个结果
+     g(f(), x)          -- f() 会被调整为1个结果
+     g(x, f())          -- g 收到x与f()的所有返回值
+     a,b,c = f(), x     -- f() 会被调整为1个结果（c将是nil)
+     a,b = ...          -- a 收到可变参数列表的第一个参数，
+                        -- b 收到第二个参数（如果可变参数列表中
+                        -- 没有实际的参数，a 和 b 都会收到 nil）
 
-###3.4.1 – Arithmetic Operators
+     a,b,c = x, f()     -- f()的返回结果将被注入右边的序列中，右边的序列会被调整为3个结果；
+     a,b,c = f()        -- f() 的返回结果会被调整为3个结果；
+     return f()         -- 返回 f() 的所有返回结果
+     return ...         -- 返回从可变参数列表中接收到的所有参数parameters
+     return x,y,f()     -- 返回 x, y, 以及 f() 的所有返回值
+     {f()}              -- 用 f() 的所有返回值创建一个列表
+     {...}              -- 用可变参数中的所有值创建一个列表
+     {f(), nil}         -- f() 被调整为一个结果
+被括号括起来的表达式永远被当作一个值。 所以， (f(x,y,z)) 即使 f 返回多个值， 这个表达式永远是一个单一值。 （(f(x,y,z)) 的值是 f 返回的第一个值。 如果 f 不返回值的话，那么它的值就是 nil 。）
 
-Lua supports the following arithmetic operators:
-lua支持如下的数学运算符：
+###3.4.1 – 数学运算操作符
 
-+: addition
--: subtraction
-*: multiplication
-/: float division
-**//: floor division**
-%: modulo
-^: exponentiation 取幂
--: unary minus 取负
-With the exception of exponentiation and float division, the arithmetic operators work as follows: If both operands are integers, the operation is performed over integers and the result is an integer. Otherwise, if both operands are numbers or strings that can be converted to numbers (see §3.4.3), then they are converted to floats, the operation is performed following the usual rules for floating-point arithmetic (usually the IEEE 754 standard), and the result is a float.
+Lua支持如下的数学运算符：
+
+- +: 加法
+- -: 减法
+- *: 乘法
+- /: 浮点除法
+- //: 向下取整除法
+- %: 取模
+- ^: 幂
+- -: 取负
+
 如果两边都是integer，那么除了exponentiation和float division之外，结果都是integer。除此之外，如果两边都是number或者能够转化成number的string，那么它们都会先被转换成float，然后再进行计算，并且结果是float。
 	print("3.3"/"3") //3.0
 
-Exponentiation and float division (/) always convert their operands to floats and the result is always a float. Exponentiation uses the ISO C function pow, so that it works for non-integer exponents too.
-取幂（^）和浮点数除法（/）总是把它们的操作数转换成float，并且结果也是float。exponentiations使用ISO C function pow，所以它也支持非integer的exponent。
+幂（^）和浮点数除法（/）总是把它们的操作数转换成float，并且结果也是float。exponentiations使用ISO C function pow，所以它也支持非integer的exponent。
 
-Floor division (//) is a division that rounds the quotient towards minus infinite, that is, the floor of the division of its operands.
 //会先做浮点数除法，然后取底。
 
 	print(11//3) //3
 	print(-11//3) //-4
 
-Modulo is defined as the remainder of a division that rounds the quotient towards minus infinite (floor division).
+取模被定义成除法的余数，其商被圆整到靠近负无穷的一侧（向下取整的除法）。
 
-modulo会取余。
+对于整数数学运算的溢出问题， 这些操作采取的策略是按通常遵循的以 2 为补码的数学运算的 环绕 规则。 （换句话说，它们返回其运算的数学结果对 264 取模后的数字。）
 
-**In case of overflows in integer arithmetic, all operations wrap around, according to the usual rules of two-complement arithmetic. (In other words, they return the unique representable integer that is equal modulo 264 to the mathematical result.)**TODO 
+###3.4.2 – 位操作符
 
-###3.4.2 – Bitwise Operators
-
-Lua supports the following bitwise operators:
 lua支持如下的bitwise操作。
 &: bitwise and
 |: bitwise or
@@ -809,66 +760,53 @@ lua支持如下的bitwise操作。
 All bitwise operations convert its operands to integers (see §3.4.3), operate on all bits of those integers, and result in an integer.
 所有的bitwise操作数都会将操作数转换为integer，作用在integer的所有Bit位上，并且结果也是一个integer。
 
-Both right and left shifts fill the vacant bits with zeros. Negative displacements shift to the other direction; displacements with absolute values equal to or higher than the number of bits in an integer result in zero (as all bits are shifted out).
-**TODO**
+对于右移和左移，均用零来填补空位。 移动的位数若为负，则向反方向位移； 若移动的位数的绝对值大于等于 整数本身的位数，其结果为零 （所有位都被移出）。
 
-###3.4.3 – Coercions and Conversions 政策 和 转换
+###3.4.3 – 强制转换
 
-Lua provides some automatic conversions between some types and representations at run time. Bitwise operators always convert float operands to integers. Exponentiation and float division always convert integer operands to floats. All other arithmetic operations applied to mixed numbers (integers and floats) convert the integer operand to a float; this is called the usual rule. The C API also converts both integers to floats and floats to integers, as needed. Moreover, string concatenation accepts numbers as arguments, besides strings.
-lua对某些类型在运行时提供了一些自动的转换。位操作始终把float转换成integer。取幂和除法始终把操作数转换成float。所有的复合的操作数对，都会转换成float。同时string concatenation接受数字作为参数。
+Lua对某些类型在运行时提供了一些自动的转换。位操作始终把float转换成integer。取幂和除法始终把操作数转换成float。所有的复合的操作数对，都会转换成float。同时string concatenation接受数字作为参数。
 
-Lua also converts strings to numbers, whenever a number is expected.
-lua也能够在预期是number的地方将字符串转换成numebr。
+Lua也能够在预期是number的地方将字符串转换成numebr。
 
-In a conversion from integer to float, if the integer value has an exact representation as a float, that is the result. Otherwise, the conversion gets the nearest higher or the nearest lower representable value. This kind of conversion never fails.
-**TODO**
+当把一个整数转换为浮点数时， 若整数值恰好可以表示为一个浮点数，那就取那个浮点数。 否则，转换会取最接近的较大值或较小值来表示这个数。 这种转换是不会失败的。**TODO？？**
 
-The conversion from float to integer checks whether the float has an exact representation as an integer (that is, the float has an integral value and it is in the range of integer representation). If it does, that representation is the result. Otherwise, the conversion fails.
 从float到integer的转换，Lua会检查这个float是否能够转换成integer（1，是否有integer部分值 2，是否在integer的range内）。
 
-The conversion from strings to numbers goes as follows: First, the string is converted to an integer or a float, following its syntax and the rules of the Lua lexer. (The string may have also leading and trailing spaces and a sign.) Then, the resulting number is converted to the required type (float or integer) according to the previous rules.
 从string到number的转化，1，string被转化成integer或者float，看具体的string内容。2，把integer或者float转化到合适的类型。
 
-The conversion from numbers to strings uses a non-specified human-readable format. For complete control over how numbers are converted to strings, use the format function from the string library (see string.format).
-从number转化到string，使用了一个不明确的human-readabel格式。如果需要严格控制number到字符串的表达，请使用format函数（string.format，见string library)。
+从number转化到string，使用了一个不明确的human-readable格式。如果需要严格控制number到字符串的表达，请使用format函数（string.format，见string library)。
 
-###3.4.4 – Relational Operators 关系操作
-Lua supports the following relational operators:
+###3.4.4 – 比较操作符
 Lua支持如下的关系操作：
-==: equality 等于
-~=: inequality不等于
-<: less than 小于
->: greater than 大雨
-<=: less or equal 小于等于
->=: greater or equal 大于等于
-These operators always result in false or true.
+
+- ==: equality 等于
+- ~=: inequality不等于
+- <: less than 小于
+- >: greater than 大雨
+- <=: less or equal 小于等于
+- >=: greater or equal 大于等于
+
 关系操作的结果总是false或者true。
-Equality (==) first compares the type of its operands. If the types are different, then the result is false. Otherwise, the values of the operands are compared. Strings are compared in the obvious way. Numbers follow the usual rule for binary operations: if both operands are integers, they are compared as integers; otherwise, they are converted to floats and compared as such.
 Equality（==）会先看两遍的type。如果type不同，则直接false。	
 	这里注意lua对某些数值的处理比如：
 	f = 2.0
 	print(f==2)//true
-Tables, userdata, and threads are compared by reference: two objects are considered equal only if they are the same object. Every time you create a new object (a table, userdata, or thread), this new object is different from any previously existing object. Closures with the same reference are always equal. Closures with any detectable difference (different behavior, different definition) are always different.
+
 table,userdata,以及thread以reference来做比较。两个object被认为equal只有当他们就是同一个object。每次创建的对象都是新的。具有相同reference的闭包也总是equal的。有任何差异的（包括behavior和definition）的闭包总是不同。
 
-You can change the way that Lua compares tables and userdata by using the "eq" metamethod (see §2.4).
-可以使用eq metamethod来改变lua对table userdata的比较处理。**TODO**
+可以使用eq metamethod来改变lua对table userdata的比较处理。
 
-Equality comparisons do not convert strings to numbers or vice versa. Thus, "0"==0 evaluates to false, and t[0] and t["0"] denote different entries in a table.
-equality比较不会将strings转变成number或者反过来。所以“0”==0为false，并且t[0]和t["0"]表示table的不同entry。**TODO**
+equality比较不会将strings转变成number或者反过来。所以“0”==0为false，并且t[0]和t["0"]表示table的不同entry。
 
-The operator ~= is exactly the negation of equality (==).
 ~=是就是==的取非。
 
-The order operators work as follows. If both arguments are numbers, then they are compared following the usual rule for binary operations. Otherwise, if both arguments are strings, then their values are compared according to the current locale. **Otherwise, Lua tries to call the "lt" or the "le" metamethod (see §2.4). A comparison a > b is translated to b < a and a >= b is translated to b <= a.**
+大小比较操作以以下方式进行。 如果参数都是数字， 它们按二元操作的常规进行。 否则，如果两个参数都是字符串， 它们的值按当前的区域设置来比较。 再则，Lua 就试着调用 "lt" 或是 "le" 元方法 （参见 §2.4）。 a > b 的比较被转译为 b < a， a >= b 被转译为 b <= a。
 
-###3.4.5 – Logical Operators
+###3.4.5 – 逻辑操作符
 
-The logical operators in Lua are and, or, and not. Like the control structures (see §3.3.4), all logical operators consider both false and nil as false and anything else as true.
-lua有3个逻辑operator分别是and,or和not。和condition判断一样，logical operator把false and nil作为false其它的一切都是true。
+Lua有3个逻辑operator分别是and,or和not。和condition判断一样，logical operator把false 和 nil作为false其它的一切都是true。
 
-The negation operator not always returns false or true. The conjunction operator **and** returns its first argument if this value is false or nil; otherwise, and returns its second argument. The disjunction operator **or** returns its first argument if this value is different from nil and false; otherwise, or returns its second argument. Both and and or use short-circuit evaluation; that is, the second operand is evaluated only if necessary. Here are some examples:
-与传统语义是相同的。
+取反操作 not 总是返回 false 或 true 中的一个。 与操作符 and 在第一个参数为 false 或 nil 时 返回这第一个参数； 否则，and 返回第二个参数。 或操作符 or 在第一个参数不为 nil 也不为 false 时， 返回这第一个参数，否则返回第二个参数。 and 和 or 都遵循短路规则； 也就是说，第二个操作数只在需要的时候去求值。 这里有一些例子：
 
      10 or 20            --> 10
      10 or error()       --> 10
@@ -878,31 +816,26 @@ The negation operator not always returns false or true. The conjunction operator
      false and nil       --> false
      false or nil        --> nil
      10 and 20           --> 20
-(In this manual, --> indicates the result of the preceding expression.)
+（在这本手册中， --> 指前面表达式的结果。）
 
-###3.4.6 – Concatenation级联
+###3.4.6 – 字节序连接
 
-The string concatenation operator in Lua is denoted by two dots ('..'). If both operands are strings or numbers, then they are converted to strings according to the rules described in §3.4.3. Otherwise, the __concat metamethod is called (see §2.4).
-lua的string连接操作符是“..”，如果两边都是String或者number，那么他们将先变成string，然后连接。其它情况下__concat metamethod被调用。
-###3.4.7 – The Length Operator长度操作符
+Lua的string连接操作符是“..”，如果两边都是String或者number，那么他们将先变成string，然后连接。其它情况下__concat metamethod被调用。
 
-The length operator is denoted by the unary prefix operator #. The length of a string is its number of bytes (that is, the usual meaning of string length when each character is one byte).
+###3.4.7 – 取长度操作符
+
 长度操作符是#。string的长度是byte的数目。
 	a= "1234abcd"
 	print(#a) //8
-A program can modify the behavior of the length operator for any value but strings through the __len metamethod (see §2.4).
 可以通过修改__len这个metamethod来改变#操作符的语义。
-Unless a __len metamethod is given, the length of a table t is only defined if the table is a sequence, that is, the set of its positive numeric keys is equal to {1..n} for some non-negative integer n. In that case, n is its length. Note that a table like
-除非__len这个metamethod存在，否则table的长度只有当table是一个sequence时才存在，也就是说该table的所有正的整数key刚好是一个{1..n}的set。这种情况下n就是它的长度。
+除非__len这个metamethod存在，否则table的长度只有当table是一个sequence时才存在，也就是说该table的所有正的整数key**刚好是一个{1..n}的set**。这种情况下n就是它的长度。
 
      {10, 20, nil, 40}
 这个不是sequence，因为它有key4但没有key3. 只有Positive Integer key才会影响table的sequence与否。
-is not a sequence, because it has the key 4 but does not have the key 3. (So, there is no n such that the set {1..n} is equal to the set of positive numeric keys of that table.) Note, however, that non-numeric keys do not interfere with whether a table is a sequence.
 
+###3.4.8 – 优先级
 
-###3.4.8 – Precedence优先级
-
-Operator precedence in Lua follows the table below, from lower to higher priority:
+Lua 中操作符的优先级写在下表中，从低到高优先级排序：
 
      or
      and
@@ -916,20 +849,20 @@ Operator precedence in Lua follows the table below, from lower to higher priorit
      *     /     //    %
      unary operators (not   #     -     ~)
      ^
-As usual, you can use parentheses to change the precedences of an expression. The concatenation ('..') and exponentiation ('^') operators are right associative. All other binary operators are left associative.
+通常， 你可以用括号来改变运算次序。 **连接操作符 ('..') 和乘方操作 ('^') 是从右至左的。** 其它所有的操作都是从左至右。
 
-3.4.9 – Table Constructors
+###3.4.9 – 表的构建
 
-Table constructors are expressions that create tables. Every time a constructor is evaluated, a new table is created. A constructor can be used to create an empty table or to create a table and initialize some of its fields. The general syntax for constructors is
+表构造子是一个构造表的表达式。 每次构造子被执行，都会构造出一张新的表。 构造子可以被用来构造一张空表， 也可以用来构造一张表并初始化其中的一些域。 一般的构造子的语法如下
 
 	tableconstructor ::= ‘{’ [fieldlist] ‘}’
 	fieldlist ::= field {fieldsep field} [fieldsep]
 	field ::= ‘[’ exp ‘]’ ‘=’ exp | Name ‘=’ exp | exp
 	fieldsep ::= ‘,’ | ‘;’
-Each field of the form [exp1] = exp2 adds to the new table an entry with key exp1 and value exp2. A field of the form name = exp is equivalent to ["name"] = exp. Finally, fields of the form exp are equivalent to [i] = exp, where i are consecutive integers starting with 1. Fields in the other formats do not affect this counting. For example,
+每个形如 [exp1] = exp2 的域向表中增加新的一项， 其键为 exp1 而值为 exp2。 形如 name = exp 的域等价于 ["name"] = exp。 最后，形如 exp 的域等价于 [i] = exp ， 这里的 i 是一个从 1 开始不断增长的数字。 这这个格式中的其它域不会破坏其记数。 举个例子：
 
      a = { [f(1)] = g; "x", "y"; x = 1, f(x), [30] = 23; 45 }
-is equivalent to
+等价于
 
      do
        local t = {}
@@ -942,19 +875,18 @@ is equivalent to
        t[4] = 45          -- 4th exp
        a = t
      end
-The order of the assignments in a constructor is undefined. (This order would be relevant only when there are repeated keys.)
+构造子中赋值的次序未定义。 （次序问题只会对那些键重复时的情况有影响。）
 
-If the last field in the list has the form exp and the expression is a function call or a vararg expression, then all values returned by this expression enter the list consecutively (see §3.4.10).
+如果表单中最后一个域的形式是 exp ， 而且其表达式是一个函数调用或者是一个可变参数， 那么这个表达式所有的返回值将依次进入列表 （参见 §3.4.10）。
 
-The field list can have an optional trailing separator, as a convenience for machine-generated code.
+初始化域表可以在最后多一个分割符， 这样设计可以方便由机器生成代码。
 
-####3.4.10 – function调用
+####3.4.10 – 函数调用
 
 function调用的语法:
 
 	functioncall ::= prefixexp args
-**TODO 看不懂**
-In a function call, first prefixexp and args are evaluated. If the value of prefixexp has type function, then this function is called with the given arguments. Otherwise, the prefixexp "call" metamethod is called, having as first parameter the value of prefixexp, followed by the original call arguments (see §2.4).
+函数调用时， 第一步，prefixexp 和 args 先被求值。 如果 prefixexp 的值的类型是 function， 那么这个函数就被用给出的参数调用。 否则 prefixexp 的元方法 "call" 就被调用， 第一个参数是 prefixexp 的值， 接下来的是原来的调用参数 （参见 §2.4）。
 
 
 有个语法糖，
@@ -976,65 +908,86 @@ Arguments 的规则定义如下:
 当参数只是一个string时，可以用f'string'或者f"string"或者f[[string]]来代替f('string')
 
 
+return functioncall 这样的调用形式将触发一次 尾调用。 Lua 实现了 完全尾调用（或称为 完全尾递归）： 在尾调用中， 被调用的函数重用调用它的函数的堆栈项。 因此，**对于程序执行的嵌套尾调用的层数是没有限制的。** 然而，尾调用将删除调用它的函数的任何调试信息。 注意，尾调用只发生在特定的语法下， 仅当 return 只有单一函数调用作为参数时才发生尾调用； 这种语法使得调用函数的所有结果可以完整地返回。 因此，下面这些例子都不是尾调用：
 
-
-
-All argument expressions are evaluated before the call. A call of the form f{fields} is syntactic sugar for f({fields}); that is, the argument list is a single new table. A call of the form f'string' (or f"string" or f[[string]]) is syntactic sugar for f('string'); that is, the argument list is a single literal string.
-
-A call of the form return functioncall is called a tail call. Lua implements proper tail calls (or proper tail recursion): in a tail call, the called function reuses the stack entry of the calling function. Therefore, there is no limit on the number of nested tail calls that a program can execute. However, a tail call erases any debug information about the calling function. Note that a tail call only happens with a particular syntax, where the return has one single function call as argument; this syntax makes the calling function return exactly the returns of the called function. So, none of the following examples are tail calls:
-
-     return (f(x))        -- results adjusted to 1
+     return (f(x))        -- 返回值被调整为一个
      return 2 * f(x)
-     return x, f(x)       -- additional results
-     f(x); return         -- results discarded
-     return x or f(x)     -- results adjusted to 1
+     return x, f(x)       -- 追加若干返回值
+     f(x); return         -- 返回值全部被舍弃
+     return x or f(x)     -- 返回值被调整为一个
 ####3.4.11 – function定义
 
-The syntax for function definition is
+Lua 中的函数调用的语法如下：
+
+	functioncall ::= prefixexp args
+函数调用时， 第一步，prefixexp 和 args 先被求值。 如果 prefixexp 的值的类型是 function， 那么这个函数就被用给出的参数调用。 否则 prefixexp 的元方法 "call" 就被调用， 第一个参数是 prefixexp 的值， 接下来的是原来的调用参数 （参见 §2.4）。
+
+这样的形式
+
+	functioncall ::= prefixexp ‘:’ Name args
+可以用来调用 "方法"。 这是 Lua 支持的一种语法糖。 像 v:name(args) 这个样子， 被解释成 v.name(v,args)， 这里的 v 只会被求值一次。
+
+参数的语法如下：
+
+	args ::= ‘(’ [explist] ‘)’
+	args ::= tableconstructor
+	args ::= LiteralString
+所有参数的表达式求值都在函数调用之前。 这样的调用形式 f{fields} 是一种语法糖用于表示 f({fields})； 这里指参数列表是一个新创建出来的列表。 而这样的形式 f'string' （或是 f"string" 亦或是 f[[string]]） 也是一种语法糖，用于表示 f('string')； 此时的参数列表是一个单独的字符串。
+
+return functioncall 这样的调用形式将触发一次 尾调用。 Lua 实现了 完全尾调用（或称为 完全尾递归）： 在尾调用中， 被调用的函数重用调用它的函数的堆栈项。 因此，对于程序执行的嵌套尾调用的层数是没有限制的。 然而，尾调用将删除调用它的函数的任何调试信息。 注意，尾调用只发生在特定的语法下， 仅当 return 只有单一函数调用作为参数时才发生尾调用； 这种语法使得调用函数的所有结果可以完整地返回。 因此，下面这些例子都不是尾调用：
+
+     return (f(x))        -- 返回值被调整为一个
+     return 2 * f(x)
+     return x, f(x)       -- 追加若干返回值
+     f(x); return         -- 返回值全部被舍弃
+     return x or f(x)     -- 返回值被调整为一个
+####3.4.11 – 函数定义
+
+函数定义的语法如下：
 
 	functiondef ::= function funcbody
 	funcbody ::= ‘(’ [parlist] ‘)’ block end
-The following syntactic sugar simplifies function definitions:
+另外定义了一些语法糖简化函数定义的写法：
 
 	stat ::= function funcname funcbody
 	stat ::= local function Name funcbody
 	funcname ::= Name {‘.’ Name} [‘:’ Name]
-The statement
+该语句
 
      function f () body end
-translates to
+被转译成
 
      f = function () body end
-The statement
+该语句
 
      function t.a.b.c.f () body end
-translates to
+被转译成
 
      t.a.b.c.f = function () body end
-The statement
+该语句
 
      local function f () body end
-translates to
+被转译成
 
      local f; f = function () body end
-not to
+而不是
 
      local f = function () body end
-(This only makes a difference when the body of the function contains references to f.)
+（这个差别只在函数体内需要引用 f 时才有。）
 
-A function definition is an executable expression, whose value has type function. When Lua precompiles a chunk, all its function bodies are precompiled too. Then, whenever Lua executes the function definition, the function is instantiated (or closed). This function instance (or closure) is the final value of the expression.
+一个函数定义是一个可执行的表达式， 执行结果是一个类型为 function 的值。 当 Lua 预编译一个代码块时， 代码块作为一个函数，整个函数体也就被预编译了。 那么，无论何时 Lua 执行了函数定义， 这个函数本身就进行了 实例化（或者说是 关闭了）。 这个函数的实例（或者说是 闭包）是表达式的最终值。
 
-Parameters act as local variables that are initialized with the argument values:
+形参被看作是一些局部变量， 它们将由实参的值来初始化：
 
 	parlist ::= namelist [‘,’ ‘...’] | ‘...’
-When a function is called, the list of arguments is adjusted to the length of the list of parameters, unless the function is a vararg function, which is indicated by three dots ('...') at the end of its parameter list. A vararg function does not adjust its argument list; instead, it collects all extra arguments and supplies them to the function through a vararg expression, which is also written as three dots. The value of this expression is a list of all actual extra arguments, similar to a function with multiple results. If a vararg expression is used inside another expression or in the middle of a list of expressions, then its return list is adjusted to one element. If the expression is used as the last element of a list of expressions, then no adjustment is made (unless that last expression is enclosed in parentheses).
+当一个函数被调用， 如果函数并非一个 可变参数函数， 即在形参列表的末尾注明三个点 ('...')， 那么实参列表就会被调整到形参列表的长度。 变长参数函数不会调整实参列表； 取而代之的是，它将把所有额外的参数放在一起通过 变长参数表达式传递给函数， 其写法依旧是三个点。 这个表达式的值是一串实参值的列表， 看起来就跟一个可以返回多个结果的函数一样。 如果一个变长参数表达式放在另一个表达式中使用， 或是放在另一串表达式的中间， 那么它的返回值就会被调整为单个值。 若这个表达式放在了一系列表达式的最后一个， 就不会做调整了 （除非这最后一个参数被括号给括了起来）。
 
-As an example, consider the following definitions:
+我们先做如下定义，然后再来看一个例子：
 
      function f(a, b) end
      function g(a, b, ...) end
      function r() return 1,2,3 end
-Then, we have the following mapping from arguments to parameters and to the vararg expression:
+下面看看实参到形参数以及可变长参数的映射关系：
 
      CALL            PARAMETERS
      
@@ -1048,14 +1001,14 @@ Then, we have the following mapping from arguments to parameters and to the vara
      g(3, 4)          a=3, b=4,   ... -->  (nothing)
      g(3, 4, 5, 8)    a=3, b=4,   ... -->  5  8
      g(5, r())        a=5, b=1,   ... -->  2  3
-Results are returned using the return statement (see §3.3.4). If control reaches the end of a function without encountering a return statement, then the function returns with no results.
+结果由 return 来返回（参见 §3.3.4）。 如果执行到函数末尾依旧没有遇到任何 return 语句， 函数就不会返回任何结果。
 
-There is a system-dependent limit on the number of values that a function may return. This limit is guaranteed to be larger than 1000.
+关于函数可返回值的数量限制和系统有关。 这个限制一定大于 1000 。
 
-The colon syntax is used for defining methods, that is, functions that have an implicit extra parameter self. Thus, the statement
+冒号 语法可以用来定义 方法， 就是说，函数可以有一个隐式的形参 self。 因此，如下语句
 
      function t.a.b.c:f (params) body end
-is syntactic sugar for
+是这样一种写法的语法糖
 
      t.a.b.c.f = function (self, params) body end
 ###3.5 – 变量可见性规则
@@ -1094,7 +1047,7 @@ lua的局部变量的作用域从首次申明到其所在的最内层block结束
 上面代码创建了10个闭包（closure）（即，10个匿名function)。每个闭包使用了一个不同彼此的y变量，而它们都共享同一个x变量。
 
 
-##4 – The Application Program Interface
+##4 – 编程接口
 
 This section describes the C API for Lua, that is, the set of C functions available to the host program to communicate with Lua. All API functions and related types and constants are declared in the header file lua.h.
 
