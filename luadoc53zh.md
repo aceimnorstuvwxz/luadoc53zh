@@ -209,31 +209,34 @@ Lua代码可以通过调用error函数，显式地产生一个错误。如果需
 
 Every value in Lua can have a metatable. This metatable is an ordinary Lua table that defines the behavior of the original value under certain special operations. You can change several aspects of the behavior of operations over a value by setting specific fields in its metatable. For instance, when a non-numeric value is the operand of an addition, Lua checks for a function in the field "__add" of the value's metatable. If it finds one, Lua calls this function to perform the addition.
 
-Lua中的每个值都可以有一个元表。元表就是一个普通的Lua table。元表定义了原值在特定操作下的行为。你可以通过该表元表中的原方法来该表原值在特定操作时的行为。比如，当一个非Number类型的值被执行加法操作时，Lua会去检查其元表中的“__add”项，如果存在，则调用其所对应的元方法来完成此加法操作。
-
 The keys in a metatable are derived from the event names; the corresponding values are called metamethods. In the previous example, the event is "add" and the metamethod is the function that performs the addition.
 
-元表的键名是事件名，其所对应的值就是元方法。在前面的例子中，事件名为“add”，而元方法就是执行此加法的函数。
 
 You can query the metatable of any value using the getmetatable function.
 
-你可以通过getmetatable函数来获取某值的元表。
-
 You can replace the metatable of tables using the setmetatable function. You cannot change the metatable of other types from Lua (except by using the debug library (§6.10)); you must use the C API for that.
-
-你可以通过setmetatable函数来设置table的元表。你不能在Lua中改变其它类型的元表，而只能在C代码中。
 
 Tables and full userdata have individual metatables (although multiple tables and userdata can share their metatables). Values of all other types share one single metatable per type; that is, there is one single metatable for all numbers, one for all strings, etc. By default, a value has no metatable, but the string library sets a metatable for the string type (see §6.4).
 
-Table和full userdata对于每个对象都有独立的元表（虽然多个table和userdata可以共享同一个元表）。对于其它类型，各类型下的所有值都共享一个唯一的元表。在默认情况下，除了string类型外，其它类型的值是没有初始元表的。
-
 A metatable controls how an object behaves in arithmetic operations, bitwise operations, order comparisons, concatenation, length operation, calls, and indexing. A metatable also can define a function to be called when a userdata or a table is garbage collected (§2.5).
-
-元表控制着对象在数学操作、位操作、比较操作、连接操作、取长度操作、函数调用操作 和 indexing时的表现。同时，元表还可以定义一个在GC此对象时被调用的方法。
 
 A detailed list of events controlled by metatables is given next. Each operation is identified by its corresponding event name. The key for each event is a string with its name prefixed by two underscores, '__'; for instance, the key for operation "add" is the string "__add". Note that queries for metamethods are always raw; the access to a metamethod does not invoke other metamethods. You can emulate how Lua queries a metamethod for an object obj with the following code:
 
 For the unary operators (negation, length, and bitwise not), the metamethod is computed and called with a dummy second operand, equal to the first one. This extra operand is only to simplify Lua's internals (by making these operators behave like a binary operation) and may be removed in future versions. (For most uses this extra operand is irrelevant.)
+
+"add": the + operation. If any operand for an addition is not a number (nor a string coercible to a number), Lua will try to call a metamethod. First, Lua will check the first operand (even if it is valid). If that operand does not define a metamethod for the "__add" event, then Lua will check the second operand. If Lua can find a metamethod, it calls the metamethod with the two operands as arguments, and the result of the call (adjusted to one value) is the result of the operation. Otherwise, it raises an error.
+
+Lua中的每个值都可以有一个元表。元表就是一个普通的Lua table。元表定义了原值在特定操作下的行为。你可以通过该表元表中的原方法来该表原值在特定操作时的行为。比如，当一个非Number类型的值被执行加法操作时，Lua会去检查其元表中的“__add”项，如果存在，则调用其所对应的元方法来完成此加法操作。
+
+元表的键名是事件名，其所对应的值就是元方法。在前面的例子中，事件名为“add”，而元方法就是执行此加法的函数。
+
+你可以通过getmetatable函数来获取某值的元表。
+
+你可以通过setmetatable函数来设置table的元表。你不能在Lua中改变其它类型的元表，而只能在C代码中。
+
+Table和full userdata对于每个对象都有独立的元表（虽然多个table和userdata可以共享同一个元表）。对于其它类型，各类型下的所有值都共享一个唯一的元表。在默认情况下，除了string类型外，其它类型的值是没有初始元表的。
+
+元表控制着对象在数学操作、位操作、比较操作、连接操作、取长度操作、函数调用操作 和 indexing时的表现。同时，元表还可以定义一个在GC此对象时被调用的方法。
 
 下面将会给出所有元表支持的操作名称。每个操作都有一个操作名。而元表的键名由两个下划线与操作名连接而成。比如“add”操作在元表中的键名是“__add”。注意，对元方法的引用永远是原始的（raw)，而不会调用其它的元方法。下面代码模拟了此过程：
 
@@ -241,7 +244,6 @@ For the unary operators (negation, length, and bitwise not), the metamethod is c
 
 对于一元操作符（取反、取长度和位非），元方法在被调用时会传入一个与首参数一致的第二个参数。这个多余的第二个参数只是为了Lua的实现方便。函数的实现代码中应该不能依赖于第二个参数，因为它可能在未来版本被移除。
 
-"add": the + operation. If any operand for an addition is not a number (nor a string coercible to a number), Lua will try to call a metamethod. First, Lua will check the first operand (even if it is valid). If that operand does not define a metamethod for the "__add" event, then Lua will check the second operand. If Lua can find a metamethod, it calls the metamethod with the two operands as arguments, and the result of the call (adjusted to one value) is the result of the operation. Otherwise, it raises an error.
 "add": + 操作。只要两个操作数中，任何一个不是number类型的，Lua就会尝试调用此元方法。Lua会先检查第一个操作数是否有此元方法，如果没有，再检查第二个操作数的元方法，如果存在，Lua会以此2个操作数作为参数调用此元方法。如果均不存在此元方法，Lua会报错。
 "sub": - 操作。与+类似。
 "mul": * 操作。与+类似。
@@ -275,9 +277,7 @@ For the unary operators (negation, length, and bitwise not), the metamethod is c
 
 ###2.5 – 垃圾收集（GC）
 
-
 Lua会自己管理好内存，所以你在创建对象和释放对象时不必担心内存的获取与释放。Lua通过一个垃圾回收器（GC）搜集死了的对象，并释放它们。所有lua使用的对象都会被GC管理。
-
 
 Lua实现了一个增量的mark-and-sweep搜集器。它使用数字变量来控制垃圾回收循环：GC pause和GC step multiplier。它两都是0-100的整数。（percentage points as units）
 
@@ -290,6 +290,7 @@ GC step multiplier控制着收集器运作速度相对于内存分配速度的�
 你可以通过在 C 中调用 lua_gc 或在 Lua 中调用 collectgarbage 来改变这俩数字。 这两个函数也可以用来直接控制收集器（例如停止它或重启它）。
 
 ####2.5.1 – 垃圾搜集元方法（cp cloudwu)
+
 你可以为表设定垃圾收集的元方法， 对于完全用户数据（参见 §2.4）， 则需要使用 C API 。 该元方法被称为 终结器。 终结器允许你配合 Lua 的垃圾收集器做一些额外的资源管理工作 （例如关闭文件、网络或数据库连接，或是释放一些你自己的内存）。
 
 如果要让一个对象（表或用户数据）在收集过程中进入终结流程， 你必须 标记 它需要触发终结器。 当你为一个对象设置元表时，若此刻这张元表中用一个以字符串 "__gc" 为索引的域，那么就标记了这个对象需要触发终结器。 注意：如果你给对象设置了一个没有 __gc 域的元表，之后才给元表加上这个域， 那么这个对象是没有被标记成需要触发终结器的。 然而，一旦对象被标记， 你还是可以自由的改变其元表中的 __gc 域的。
@@ -305,47 +306,56 @@ GC step multiplier控制着收集器运作速度相对于内存分配速度的�
 ####2.5.2 – 弱表
 
 A weak table is a table whose elements are weak references. A weak reference is ignored by the garbage collector. In other words, if the only references to an object are weak references, then the garbage collector will collect that object.
-一个弱表是一个所有元素都是弱引用的表。弱引用会被GC忽略。即，当对某对象的引用只有弱引用时，垃圾搜集器会搜集此对象。
 
 A weak table can have weak keys, weak values, or both. A table with weak keys allows the collection of its keys, but prevents the collection of its values. A table with both weak keys and weak values allows the collection of both keys and values. In any case, if either the key or the value is collected, the whole pair is removed from the table. The weakness of a table is controlled by the __mode field of its metatable. If the __mode field is a string containing the character 'k', the keys in the table are weak. If __mode contains 'v', the values in the table are weak.
 
-一个弱表可以有弱的键、弱的值或者都有。一个具有弱键的表允许GC搜集它的键但不允许搜集其值。一个具有弱键和弱值的表允许GC搜集其键和表。在任何情况下，只要键值对中的一个被GC搜集了，那么这整个键值对都会从此表中被移出。一个表的弱特性由其元表的“__mode”键的值所控制。如果此键值包含'k'那么表中的键是弱的，同样的，如果包含'v'，则表的值是弱的。
-
-
 A table with weak keys and strong values is also called an ephemeron table. In an ephemeron table, a value is considered reachable only if its key is reachable. In particular, if the only reference to a key comes through its value, the pair is removed.
 
-一个具有弱键强值的表又被称为蜉蝣表（生命周期极短）。在一个蜉蝣表中，一个值只有当键是可达的时候才被认为是可达的。也就是说，当对key的唯一的引用来自其值时，此键值对将被移出。**注意可达性的概念**
-
 Any change in the weakness of a table may take effect only at the next collect cycle. In particular, if you change the weakness to a stronger mode, Lua may still collect some items from that table before the change takes effect.
-任何对表的弱性的改变只会在下一个GC周期中生效。比如，你加强了弱性，Lua依旧会搜集一些弱的元素，直到下一次GC周期。
-Only objects that have an explicit construction are removed from weak tables. Values, such as numbers and light C functions, are not subject to garbage collection, and therefore are not removed from weak tables (unless their associated values are collected). Although strings are subject to garbage collection, they do not have an explicit construction, and therefore are not removed from weak tables.
 
-只有具有明确的构建行为的对象才会被GC从弱表中移除。值，比如number以及light C函数，都不是GC的处理对象，因而 它们不会被从弱表中移除，除非它们关联的键或值被搜集了。虽然string是GC的对象，但是由于它没有显式的构建过程，所以也不会被从弱表中移除。**TODO？？**
+Only objects that have an explicit construction are removed from weak tables. Values, such as numbers and light C functions, are not subject to garbage collection, and therefore are not removed from weak tables (unless their associated values are collected). Although strings are subject to garbage collection, they do not have an explicit construction, and therefore are not removed from weak tables.
 
 Resurrected objects (that is, objects being finalized and objects accessible only through objects being finalized) have a special behavior in weak tables. They are removed from weak values before running their finalizers, but are removed from weak keys only in the next collection after running their finalizers, when such objects are actually freed. This behavior allows the finalizer to access properties associated with the object through weak tables.
 
 If a weak table is among the resurrected objects in a collection cycle, it may not be properly cleared until the next cycle.
+
+一个弱表是一个所有元素都是弱引用的表。弱引用会被GC忽略。即，当对某对象的引用只有弱引用时，垃圾搜集器会搜集此对象。
+
+一个弱表可以有弱的键、弱的值或者都有。一个具有弱键的表允许GC搜集它的键但不允许搜集其值。一个具有弱键和弱值的表允许GC搜集其键和表。在任何情况下，只要键值对中的一个被GC搜集了，那么这整个键值对都会从此表中被移出。一个表的弱特性由其元表的“__mode”键的值所控制。如果此键值包含'k'那么表中的键是弱的，同样的，如果包含'v'，则表的值是弱的。
+
+一个具有弱键强值的表又被称为蜉蝣表（生命周期极短）。在一个蜉蝣表中，一个值只有当键是可达的时候才被认为是可达的。也就是说，当对key的唯一的引用来自其值时，此键值对将被移出。**注意可达性的概念**
+
+任何对表的弱性的改变只会在下一个GC周期中生效。比如，你加强了弱性，Lua依旧会搜集一些弱的元素，直到下一次GC周期。
+
+只有具有明确的构建行为的对象才会被GC从弱表中移除。值，比如number以及light C函数，都不是GC的处理对象，因而 它们不会被从弱表中移除，除非它们关联的键或值被搜集了。虽然string是GC的对象，但是由于它没有显式的构建过程，所以也不会被从弱表中移除。**TODO？？**
+
 弱表针对复活的对象 （指那些正在走终结流程，仅能被终结器访问的对象） 有着特殊的行为。 弱值引用的对象，在运行它们的终结器前就被移除了， 而弱键引用的对象则要等到终结器运行完毕后，到下次收集当对象真的被释放时才被移除。 这个行为使得终结器运行时得以访问到由该对象在弱表中所关联的属性。
 
 如果一张弱表在当次收集循环内的复活对象中， 那么在下个循环前这张表有可能未被正确地清理。
+
 ###2.6 – 协程
 
 Lua supports coroutines, also called collaborative multithreading. A coroutine in Lua represents an independent thread of execution. Unlike threads in multithread systems, however, a coroutine only suspends its execution by explicitly calling a yield function.
-Lua支持协程，它也被称为协作式的多线程。Lua中的一个协程表示一个独立的执行序列。与多线程系统中的线程不同，协程只有当明确的调用yield函数时，该执行序列才会暂停。
 
 You create a coroutine by calling coroutine.create. Its sole argument is a function that is the main function of the coroutine. The create function only creates a new coroutine and returns a handle to it (an object of type thread); it does not start the coroutine.
-你可以通过调用coroutine.create函数来创建一个协程。它的唯一的参数是一个函数，它将作为协程的函数体。这个创建函数只是创建了一个协程对象，但并没有运行此协程。
 
 You execute a coroutine by calling coroutine.resume. When you first call coroutine.resume, passing as its first argument a thread returned by coroutine.create, the coroutine starts its execution, at the first line of its main function. Extra arguments passed to coroutine.resume are passed as arguments to the coroutine's main function. After the coroutine starts running, it runs until it terminates or yields.
-你可以通过coroutine.resume方法来执行某个协程。当你首次调用coroutine.resume时，第一个参数是由coroutine.create返回thread类型的值，其主函数将会从第一行开始执行，其它传入resume的参数，将作为主函数的参数。一个协程会运行，直到它结束或者调用yield才会停止。
-
 
 A coroutine can terminate its execution in two ways: normally, when its main function returns (explicitly or implicitly, after the last instruction); and abnormally, if there is an unprotected error. In case of normal termination, coroutine.resume returns true, plus any values returned by the coroutine main function. In case of errors, coroutine.resume returns false plus an error message.
-一个协程可以通过2个方法结束它的执行。一般的，协程的主函数返回了。或者，异常的，一个不被保护的error出现了。在一般的结束时，coroutine.resume会返回true，和其它由协程主函数返回的值。在出错情况下，coroutine.resume会返回false，和一个error message。
+
 A coroutine yields by calling coroutine.yield. When a coroutine yields, the corresponding coroutine.resume returns immediately, even if the yield happens inside nested function calls (that is, not in the main function, but in a function directly or indirectly called by the main function). In the case of a yield, coroutine.resume also returns true, plus any values passed to coroutine.yield. The next time you resume the same coroutine, it continues its execution from the point where it yielded, with the call to coroutine.yield returning any extra arguments passed to coroutine.resume.
-一个协程可以调用coroutine.yield函数来让出。当一个协程让出时，对应的coroutine.resume调用会立即返回，即使yield发生在主函数直接或间接的调用的函数内。当yield时，coroutine.resume也会返回true，和coroutine.yield调用时传入的参数。当下次你resume这个协程时，它会从yield的地方继续执行，即在协程内部coroutine.yield返回了并且返回了在外部传入coroutine.resume的参数。
 
 Like coroutine.create, the coroutine.wrap function also creates a coroutine, but instead of returning the coroutine itself, it returns a function that, when called, resumes the coroutine. Any arguments passed to this function go as extra arguments to coroutine.resume. coroutine.wrap returns all the values returned by coroutine.resume, except the first one (the boolean error code). Unlike coroutine.resume, coroutine.wrap does not catch errors; any error is propagated to the caller.
+
+Lua支持协程，它也被称为协作式的多线程。Lua中的一个协程表示一个独立的执行序列。与多线程系统中的线程不同，协程只有当明确的调用yield函数时，该执行序列才会暂停。
+
+你可以通过调用coroutine.create函数来创建一个协程。它的唯一的参数是一个函数，它将作为协程的函数体。这个创建函数只是创建了一个协程对象，但并没有运行此协程。
+
+你可以通过coroutine.resume方法来执行某个协程。当你首次调用coroutine.resume时，第一个参数是由coroutine.create返回thread类型的值，其主函数将会从第一行开始执行，其它传入resume的参数，将作为主函数的参数。一个协程会运行，直到它结束或者调用yield才会停止。
+
+一个协程可以通过2个方法结束它的执行。一般的，协程的主函数返回了。或者，异常的，一个不被保护的error出现了。在一般的结束时，coroutine.resume会返回true，和其它由协程主函数返回的值。在出错情况下，coroutine.resume会返回false，和一个error message。
+
+一个协程可以调用coroutine.yield函数来让出。当一个协程让出时，对应的coroutine.resume调用会立即返回，即使yield发生在主函数直接或间接的调用的函数内。当yield时，coroutine.resume也会返回true，和coroutine.yield调用时传入的参数。当下次你resume这个协程时，它会从yield的地方继续执行，即在协程内部coroutine.yield返回了并且返回了在外部传入coroutine.resume的参数。
 
 与coroutine.create一样，coroutien.wrap也能够创建coroutine，但它不会返回一个协程对象，而是返回一个函数对象，当它被调用，所创建的不具名的协程将被resume。此函数是对不具名的协程对象与coroutine.resume的包装，传入其的参数将作为resume的参数，resume返回的值将成为此函数的返回值。但是，此函数不会返回错误信息，即resume返回的第一个值。也就是说，此函数与coroutine.resume不同，它不会补货任何的错误，任何的错误将被扩散到它的caller。
 
