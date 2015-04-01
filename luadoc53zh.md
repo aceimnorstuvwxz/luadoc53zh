@@ -1055,7 +1055,13 @@ Even when we use the term "function", any facility in the API may be provided as
 
 As in most C libraries, the Lua API functions do not check their arguments for validity or consistency. However, you can change this behavior by compiling Lua with the macro LUA_USE_APICHECK defined.
 
-4.1 – The Stack
+这章描述Lua的C API。宿主程序可以通过这些C API与Lua通讯。所有的API 函数及相关的类型与常量都在lua.h中声明。
+
+虽然我们使用“函数”来称呼这些API，但是部分特性实际上是通过宏来提供的。除非特别指出的，所有这些宏仅使用其参数一次（除了第一个Lua state参数外），所以它们不会产生任何的副作用。
+
+与常见的C函数库一样，Lua API函数不会检查其参数的有效性和一致性。但是，你可以通过定义LUA_USE_APICHECK打开参数检查。
+
+4.1 – 栈
 
 Lua uses a virtual stack to pass values to and from C. Each element in this stack represents a Lua value (nil, number, string, etc.).
 
@@ -1063,7 +1069,13 @@ Whenever Lua calls C, the called function gets a new stack, which is independent
 
 For convenience, most query operations in the API do not follow a strict stack discipline. Instead, they can refer to any element in the stack by using an index: A positive index represents an absolute stack position (starting at 1); a negative index represents an offset relative to the top of the stack. More specifically, if the stack has n elements, then index 1 represents the first element (that is, the element that was pushed onto the stack first) and index n represents the last element; index -1 also represents the last element (that is, the element at the top) and index -n represents the first element.
 
-4.2 – Stack Size
+Lua使用一个虚拟栈来与C互传值。这个栈中的所有元素都是Lua值（包括nil,number,string等）。
+
+无论何时，当Lua调用C时，被调用的函数都会获得一个新的栈。这个栈与之前获得过的栈，或仍旧在活动的栈均保持独立。这个传入C函数的栈包含着所有来自Lua的参数，并且C函数会把要返回的结果放入栈中来返回给调用者（见lua_CFunction)。
+
+为了方便，API中的大部分查询操作并不严格遵循通常的栈操作。而是，它们可以通过索引来引用任何栈中的值。一个正的索引表示栈中的一个绝对位置（从1开始）。一个负的索引表示一个与栈顶相对的位置。更具体的，如果栈中有n个元素，那么索引1和-n都表示第一个元素（位于栈底的元素），而索引n和-1则表示最后一个元素（位于栈顶的元素）。
+
+4.2 – 栈的大小
 
 When you interact with the Lua API, you are responsible for ensuring consistency. In particular, you are responsible for controlling stack overflow. You can use the function lua_checkstack to ensure that the stack has enough space for pushing new elements.
 
@@ -1071,7 +1083,14 @@ Whenever Lua calls C, it ensures that the stack has space for at least LUA_MINST
 
 When you call a Lua function without a fixed number of results (see lua_call), Lua ensures that the stack has enough space for all results, but it does not ensure any extra space. So, before pushing anything in the stack after such a call you should use lua_checkstack.
 
-4.3 – Valid and Acceptable Indices
+当你使用Lua API时，你有义务保证其一致性，包括对栈溢出的处理。你可以通过函数lua_checkstack来保证栈有足够的空间存放更多的元素。
+
+当Lua调用一个C函数时，它会保证栈中有至少LUA_MINSTACK的可用位置。LUA_MINSTACK被定义为20，所以一般而言我们不需要担心栈溢出，除非你的代码会循环的填充栈（有循环往往意味着可能有大量元素）。
+
+当你调用一个 Lua 函数却没有指定要接收多少个返回值时 （见 lua_call）， Lua 可以保证栈一定有足够的空间来接收所有的返回值， 但不保证此外留有额外的空间。 因此，在做了一次这样的调用后，如果你需要继续压栈， 则需要使用 lua_checkstack。
+
+
+4.3 – 有效索引与可接受索引
 
 Any function in the API that receives stack indices works only with valid indices or acceptable indices.
 
@@ -1085,13 +1104,30 @@ Acceptable indices serve to avoid extra tests against the stack top when queryin
 
 For functions that can be called with acceptable indices, any non-valid index is treated as if it contains a value of a virtual type LUA_TNONE, which behaves like a nil value.
 
-4.4 – C Closures
+API中接受索引的函数均只接受有效索引或者可接受索引。
+
+有效索引能够引用栈中的一个实际位置。它位于1和栈顶之间（即：1<=abs(index)<=top）。通常，函数可以修改有效索引指向的元素。
+
+除非特别指出，否则任何接受有效索引的函数也接受伪索引。伪索引指向能够被C代码访问但又不在栈中的值。伪索引被用来访问注册表和C函数的上值（见@4.4）。
+
+如果函数不需要一个栈中的位置，而只需要一个栈中的元素（比如，所有查询函数），那么它就可以使用可接受索引。有效索引和伪索引都是可接受索引，但可接受索引还包括指向在栈分配空间内栈顶上方的正索引，即在栈大小内的索引。（注意，0不是一个可接受索引。）除非明确指出，否者API函数均接受可接受索引。
+
+可接受索引避免了在查询栈元素时对栈顶的额外检查。比如，一个C函数可以查询其第三个参数但不需要事先检查它是否存在，即，不需要检查3是否是一个有效索引。
+
+凡是接受可接受索引的函数，一个对“无效”索引的查询会返回一个虚拟的类型LUA_TNONE，它的行为和nil值相似。
+
+4.4 – C闭包
 
 When a C function is created, it is possible to associate some values with it, thus creating a C closure (see lua_pushcclosure); these values are called upvalues and are accessible to the function whenever it is called.
 
 Whenever a C function is called, its upvalues are located at specific pseudo-indices. These pseudo-indices are produced by the macro lua_upvalueindex. The first value associated with a function is at position lua_upvalueindex(1), and so on. Any access to lua_upvalueindex(n), where n is greater than the number of upvalues of the current function (but not greater than 256), produces an acceptable but invalid index.
 
-4.5 – Registry
+在创建一个C函数时，我们可以额外得绑定一些值给它。我们把这样的C函数叫做C闭包（见 lua_pushcclosure)。这些被绑定的值叫做上值，它们可以在任何时候被此函数访问。
+
+当一个C函数被调用时，它的上值会被置放在特定的伪索引中。这些伪索引可以由lua_upvalueindex产生。例如，第一个被绑定到此函数的上值位于索引lua_upvalueindex(1)。当n大于当前函数上值数量时，任何对lua_upvalueindex(n)的访问都会产生一个“可接受的无效”索引。
+
+
+4.5 – 注册表
 
 Lua provides a registry, a predefined table that can be used by any C code to store whatever Lua values it needs to store. The registry table is always located at pseudo-index LUA_REGISTRYINDEX, which is a valid index. Any C library can store data into this table, but it must take care to choose keys that are different from those used by other libraries, to avoid collisions. Typically, you should use as key a string containing your library name, or a light userdata with the address of a C object in your code, or any Lua object created by your code. As with variable names, string keys starting with an underscore followed by uppercase letters are reserved for Lua.
 
@@ -1101,7 +1137,16 @@ When you create a new Lua state, its registry comes with some predefined values.
 
 LUA_RIDX_MAINTHREAD: At this index the registry has the main thread of the state. (The main thread is the one created together with the state.)
 LUA_RIDX_GLOBALS: At this index the registry has the global environment.
-4.6 – Error Handling in C
+
+Lua提供了一个注册表。它是一个被预先定义的表，C代码可以存放任何Lua值在其中。注册表永远都位于伪索引LUA_REGISTRYINDEX，并且是一个有效索引。任何C函数库都可以向其中存放数据，但是，为了防止冲突，它需要取一个与已存在的不同的键名。通常，你应该使用一个包含库名的字节串，或者一个包含要存储的C对象地址的light-userdata，或者一个由代码生成的Lua对象。Lua保留以下划线开头跟着2个大写字母的字符串键名。
+
+注册表中Integer类型的键被用来处理reference机制（见luaL_ref）和其它预定义值。所以，不要把它用于其它目的。
+
+当创建一个新的Lua State时，它的注册表中就会有一些预定义的值。这些预定义的值通过integer类型的常量来引用，它们定义在lua.h中。它们是：
+- LUA_RIDX_MAINTHREAD：指向state的主thread。（一个主thread与state同时被创建）。**TODO 无法理解**
+- LUA_RIDX_GLOBALS：指向global environment。
+
+4.6 – C中的错误处理
 
 Internally, Lua uses the C longjmp facility to handle errors. (Lua will use exceptions if you compile it as C++; search for LUAI_THROW in the source code for details.) When Lua faces any error (such as a memory allocation error, type errors, syntax errors, and runtime errors) it raises an error; that is, it does a long jump. A protected environment uses setjmp to set a recovery point; any error jumps to the most recent active recovery point.
 
@@ -1113,7 +1158,17 @@ Most functions in the API can raise an error, for instance due to a memory alloc
 
 Inside a C function you can raise an error by calling lua_error.
 
-4.7 – Handling Yields in C
+在内部，Lua使用C的longjmp来处理errors。（如果把Lua按C++编译，Lua会使用异常机制。见LUAI_THROW。）当Lua遇到一个错误（比如内存分配错误，类型错误，语法错误，以及运行时错误），它会产生一个error，即它会执行一个long jump。一个保护环境会使用setjmp来设置一个恢复点（recover point），所有error都会跳转到最近的恢复点。
+
+如果error在保护环境之外发生，那么Lua会调用一个奔溃函数（panic function @lua_atpanic）并调用abort，从而推出宿主程序。你的奔溃函数可以不返回而拒绝退出程序（比如执行一个long jump到位于Lua外的恢复点）。
+
+奔溃函数类似一个message handler（见2.3）。特别的是，error message位于栈顶。然而栈的空间没有任何保障。要放入到栈中，奔溃函数必须先检查栈的空间。（见4.2）
+
+大部分API函数会引发error，比如由于内存分配错误等。每个函数的文档都标注了它们可能的错误。
+
+在C函数中，我们可以调用lua_error来故意引发一个error。
+
+4.7 – 在C中让出
 
 Internally, Lua uses the C longjmp facility to yield a coroutine. Therefore, if a C function foo calls an API function and this API function yields (directly or indirectly by calling another function that yields), Lua cannot return to foo any more, because the longjmp removes its frame from the C stack.
 
@@ -1122,6 +1177,7 @@ To avoid this kind of problem, Lua raises an error whenever it tries to yield ac
 We need to set some terminology to explain continuations. We have a C function called from Lua which we will call the original function. This original function then calls one of those three functions in the C API, which we will call the callee function, that then yields the current thread. (This can happen when the callee function is lua_yieldk, or when the callee function is either lua_callk or lua_pcallk and the function called by them yields.)
 
 Suppose the running thread yields while executing the callee function. After the thread resumes, it eventually will finish running the callee function. However, the callee function cannot return to the original function, because its frame in the C stack was destroyed by the yield. Instead, Lua calls a continuation function, which was given as an argument to the callee function. As the name implies, the continuation function should continue the task of the original function.
+
 
 As an illustration, consider the following function:
 
@@ -1151,8 +1207,46 @@ Note the external, explicit call to the continuation: Lua will call the continua
 Besides the Lua state, the continuation function has two other parameters: the final status of the call plus the context value (ctx) that was passed originally to lua_pcallk. (Lua does not use this context value; it only passes this value from the original function to the continuation function.) For lua_pcallk, the status is the same value that would be returned by lua_pcallk, except that it is LUA_YIELD when being executed after a yield (instead of LUA_OK). For lua_yieldk and lua_callk, the status is always LUA_YIELD when Lua calls the continuation. (For these two functions, Lua will not call the continuation in case of errors, because they do not handle errors.) Similarly, when using lua_callk, you should call the continuation function with LUA_OK as the status. (For lua_yieldk, there is not much point in calling directly the continuation function, because lua_yieldk usually does not return.)
 
 Lua treats the continuation function as if it were the original function. The continuation function receives the same Lua stack from the original function, in the same state it would be if the callee function had returned. (For instance, after a lua_callk the function and its arguments are removed from the stack and replaced by the results from the call.) It also has the same upvalues. Whatever it returns is handled by Lua as if it were the return of the original function.
+**十分抽象**引用cloudwu
 
-4.8 – Functions and Types
+Lua 内部使用 C 的 longjmp 机制让出一个协程。 因此，如果一个 C 函数 foo 调用了一个 API 函数， 而这个 API 函数让出了（直接或间接调用了让出函数）。 由于 longjmp 会移除 C 栈的栈帧， Lua 就无法返回到 foo 里了。
+
+为了回避这类问题， 碰到 API 调用中调用让出时，除了那些抛出错误的 API 外，还提供了三个函数： lua_yieldk， lua_callk，和 lua_pcallk 。 它们在让出发生时，可以从传入的 延续函数 （名为 k 的参数）继续运行。
+
+我们需要预设一些术语来解释延续点。 对于从 Lua 中调用的 C 函数，我们称之为 原函数。 从这个原函数中调用的上面所述的三个 C API 函数我们称之为 被调函数。 被调函数可以使当前线程让出。 （让出发生在被调函数是 lua_yieldk， 或传入 lua_callk 或 lua_pcallk 的函数调用了让出时。）
+
+假设正在运行的线程在执行被调函数时让出。 当再次延续这条线程，它希望继续被调函数的运行。 然而，被调函数不可能返回到原函数中。 这是因为之前的让出操作破坏了 C 栈的栈帧。 作为替代品，Lua 调用那个作为被调函数参数给出的 延续函数 。 正如其名，延续函数将延续原函数的任务。
+
+下面的函数会做一个说明：
+
+     int original_function (lua_State *L) {
+       ...     /* code 1 */
+       status = lua_pcall(L, n, m, h);  /* calls Lua */
+       ...     /* code 2 */
+     }
+现在我们想允许被 lua_pcall 运行的 Lua 代码让出。 首先，我们把函数改写成这个样子：
+
+     int k (lua_State *L, int status, lua_KContext ctx) {
+       ...  /* code 2 */
+     }
+     
+     int original_function (lua_State *L) {
+       ...     /* code 1 */
+       return k(L, lua_pcall(L, n, m, h), ctx);
+     }
+上面的代码中，新函数 k 就是一个 延续函数 （函数类型为 lua_KFunction）。 它的工作就是原函数中调用 lua_pcall 之后做的那些事情。 现在我们必须通知 Lua 说，你必须在被 lua_pcall 执行的 Lua 代码发生过中断（错误或让出）后， 还得继续调用 k 。 所以我们还得继续改写这段代码，把 lua_pcall 替换成 lua_pcallk：
+
+     int original_function (lua_State *L) {
+       ...     /* code 1 */
+       return k(L, lua_pcallk(L, n, m, h, ctx2, k), ctx1);
+     }
+注意这里那个额外的显式的对延续函数的调用： Lua 仅在需要时，这可能是由错误导致的也可能是发生了让出而需要继续运行，才会调用延续函数。 如果没有发生过任何让出，调用的函数正常返回， 那么 lua_pcallk （以及 lua_callk）也会正常返回。 （当然，这个例子中你也可以不在之后调用延续函数， 而是在原函数的调用后直接写上需要做的工作。）
+
+除了 Lua 状态，延续函数还有两个参数： 一个是调用最后的状态码，另一个一开始由 lua_pcallk 传入的上下文 （ctx）。 （Lua 本身不使用这个值；它仅仅从原函数转发这个值给延续函数。） 对于 lua_pcallk 而言， 状态码和 lua_pcallk 本应返回值相同，区别仅在于发生过让出后才执行完时，状态码为 LUA_YIELD（而不是 LUA_OK）。 对于 lua_yieldk 和 lua_callk 而言， 调用延续函数传入的状态码一定是 LUA_YIELD。 （对这两个函数，Lua 不会因任何错误而调用延续函数。 因为它们并不处理错误。） 同样，当你使用 lua_callk 时， 你应该用 LUA_OK 作为状态码来调用延续函数。 （对于 lua_yieldk， 几乎没有什么地方需要直接调用延续函数， 因为 lua_yieldk 本身并不会返回。）
+
+Lua 会把延续函数看作原函数。 延续函数将接收到和原函数相同的 Lua 栈，其接收到的 lua 状态也和 被调函数若返回后应该有的状态一致。 （例如， lua_callk 调用之后， 栈中之前压入的函数和调用参数都被调用产生的返回值所替代。） 这时也有相同的上值。 等到它返回的时候，Lua 会将其看待成原函数的返回去操作。
+
+4.8 – API函数和类型
 
 Here we list all functions and types from the C API in alphabetical order. Each function has an indicator like this: [-o, +p, x]
 
