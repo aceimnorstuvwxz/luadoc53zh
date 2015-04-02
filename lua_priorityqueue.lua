@@ -1,7 +1,9 @@
 --[[
-node的数据结构
+Priority Queue
+
+node数据结构
 node.elements 序列
-node.size() 返回大小
+node.size 返回大小
 ]]--
 
 --建立一个空堆

@@ -1,3 +1,4 @@
+--Eigth Queen
 q = {0,0,0,0,0,0,0,0}
 count = 0
 function valid(index)

@@ -1,4 +1,4 @@
---[[¿ìËÙÅÅĞò]]--
+--¿ìËÙÅÅĞò£¬Ã°ÅİÅÅĞò
 
 function qsa(d,s,e)
     if (s >= e) then return end
